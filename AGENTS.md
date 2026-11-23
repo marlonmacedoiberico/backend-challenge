@@ -2,20 +2,21 @@
 
 ## Project Structure & Module Organization
 
-This repository is the ClinicSay backend challenge scaffold. `openapi.yaml` defines the service contract, while `enunciado.pdf` and `enunciado.md` contain the challenge statement. `docker-compose.yml` currently starts the simulated messaging provider in `provider/`; implement the API service and database alongside it in the Compose configuration. The provider's `server.mjs` is fixed for evaluation and must not be modified. Product requirements and design notes live under `.ai/steering/` and `.ai/specs/`.
+This repository contains the ClinicSay backend API scaffold. `src/` holds the Node.js/TypeScript service, `migrations/` contains PostgreSQL migrations, and the root `Dockerfile` builds the API. `openapi.yaml` defines the service contract; `enunciado.pdf` and `enunciado.md` contain the challenge statement. `docker-compose.yml` runs the API, PostgreSQL, and simulated messaging provider in `provider/`. The provider's `server.mjs` is fixed for evaluation and must not be modified. Product requirements and design notes live under `.ai/steering/` and `.ai/specs/`.
 
 ## Build, Test, and Development Commands
 
-There is no application package manifest or test suite in the scaffold yet. Use Docker Compose to run the existing provider:
+Build and run the local stack with Docker Compose:
 
-- `docker compose up --build` builds and starts the provider on port 4010.
-- `docker compose down` stops the services.
+- `docker compose up --build` builds and starts the API, database, and provider.
+- `docker compose down` stops the services while preserving the PostgreSQL volume.
+- `npm install` installs dependencies for local development; `npm run build` compiles TypeScript into `dist/`.
 
-As you add the API, document its run and test commands in the README. The intended API configuration includes port `3000`, `CLOCK_MODE=test`, and `PROVIDER_URL=http://provider:4010` (see `docker-compose.yml`).
+The API uses port `3000`, `CLOCK_MODE=test`, `PROVIDER_URL=http://provider:4010`, and `DATABASE_URL` (see `docker-compose.yml`). Document any new run or test commands in the README.
 
 ## Coding Style & Naming Conventions
 
-The supplied provider uses native JavaScript ES modules, two-space indentation, semicolons, and single quotes. Follow those conventions for JavaScript unless the selected application framework establishes a consistent alternative. Keep HTTP routes aligned with the lowercase, plural resource paths in `openapi.yaml`; keep database and API behavior consistent with that contract and the `.ai/` specifications.
+Use TypeScript with two-space indentation, semicolons, and single quotes, consistent with the API scaffold and supplied provider. Keep HTTP routes aligned with the paths in `openapi.yaml`; keep database and API behavior consistent with that contract and the `.ai/` specifications.
 
 ## Testing Guidelines
 

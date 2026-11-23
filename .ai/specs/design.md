@@ -14,3 +14,5 @@ As of appointment desing:
 The Docker compose must include our application with
 the environment settings specified in  @docker-compose.yml
 
+The backend must comply with Clean Architecture.
+A layout example (for Python) appears in @.ai\specs\candidate-layout.md

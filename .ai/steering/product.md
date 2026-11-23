@@ -1,7 +1,47 @@
+# ClinicSay Product Overview
 
-The main reference of the product is @enunciado.pdf
+## Product Purpose
 
-This is an application to book appointments for clinics
-and the main focus is to implement the reminder functionality
-described in  @enunciado.pdf
+ClinicSay is an appointment management backend for clinics in Spain. It helps clinics reduce avoidable no-shows by sending timely appointment reminders and letting patients confirm or cancel by replying to the message. The core product challenge is to deliver the right reminder at the right local time, handle unreliable messaging providers, and avoid duplicate or stale messages.
 
+## Users and Context
+
+- **Clinic staff and connected systems** create clinics, patients, and appointments through the API. This challenge has no user interface or authentication.
+- **Patients** receive a reminder and may reply `SI` to confirm or `NO` to cancel. A phone number may be shared by family members, so inbound replies must be matched to the appropriate eligible appointment.
+- **The clinic's operations system** triggers reminder processing. A production scheduler is outside the service's scope; the challenge invokes a job endpoint directly.
+
+## Product Outcomes
+
+1. Create and manage the appointment lifecycle needed for reminders.
+2. Send one accurate reminder for the appointment's current schedule, using the clinic's IANA time zone and respecting daylight-saving changes.
+3. Process retries and concurrent job runs without duplicate patient messages.
+4. Apply patient replies once and only to an eligible appointment.
+5. Make the service reproducible for evaluation with Docker Compose, PostgreSQL, migrations, and a controllable test clock.
+
+## MVP Scope
+
+The evaluated HTTP surface is defined by [openapi.yaml](../../openapi.yaml): create clinics and patients; create, retrieve, reschedule, and cancel appointments; run due reminders; receive inbound messages; check readiness; and set the clock when `CLOCK_MODE=test` is enabled. The API contract and [challenge statement](../../enunciado.md) define the required paths, payloads, status codes, and response shapes.
+
+An appointment starts as `scheduled`, may become `confirmed` or `cancelled`, and cannot be rescheduled after cancellation or after it has started. Rescheduling increments its version, invalidates outstanding reminders, creates a reminder for the new version, and clears a previous confirmation. Each reminder stores the appointment version it belongs to so stale work can be rejected. Cancellation stops outstanding reminders while preserving sent history.
+
+Reminder timing, quiet hours, eligibility, message text, retry delays, provider outcomes, and reply normalization are detailed in [reminder-rules.md](../specs/reminder-rules.md) and the challenge statement. Preserve the challenge's Spain-specific local-time and daylight-saving behavior. The provider in `provider/` is fixed evaluation infrastructure and must not be modified.
+
+## Out of Scope
+
+The challenge does not require authentication, a front end, editing clinics or patients, pagination, or a real messaging provider. Production cron scheduling and production deployment are discussion topics for the README, not deliverables in the evaluated service.
+
+## Technology and Delivery Constraints
+
+Use Node.js 22 or newer, TypeScript, and PostgreSQL. The service runs on port `3000` with `CLOCK_MODE=test` and `PROVIDER_URL=http://provider:4010`. Docker Compose must start the API, database, and fixed provider; database migrations must run at startup, and `/health` must report ready only after the database is usable and migrated. The README must explain setup, database creation, tests, key design decisions, known omissions, and a production approach.
+
+## Alignment Gaps and Recommended Improvements
+
+These items need to be reconciled before the contract, implementation, and documentation can be considered aligned:
+
+1. **Expose appointment versions consistently.** The project decision requires an appointment `version` and a reminder `appointmentVersion`, but neither field appears in the OpenAPI schemas. Add them to the contract if they are part of the API response, or document that they are persistence-only fields.
+2. **Resolve retry quiet-hours drift.** The challenge says retries do not wait for the 21:00-09:00 quiet period, while `reminder-rules.md` says quiet hours apply to retries. Align the reminder rules with the challenge behavior.
+3. **Define inbound reply tie-breaking.** Replies target the most recently reminded eligible appointment for the sender's phone number. Specify what happens when multiple eligible appointments have the same latest reminder time, and record the chosen rule in the requirements and acceptance tests.
+4. **Separate decisions from unanswered questions.** `MISSING_REQS.md` currently mixes confirmed versioning and setup decisions with unresolved work. Keep confirmed decisions in product/requirements documentation and reserve that file for genuine open questions, including the CRUD-service wording below.
+5. **Clarify the CRUD request.** Existing steering asks for CRUD services for clinics, patients, and appointments, but the challenge does not require clinic/patient editing and the API contract exposes only their creation. Confirm whether the additional CRUD refers to internal service methods or extra HTTP endpoints; do not expand the evaluated API without a decision.
+
+Keep detailed behavioral rules in the requirements and API documents. This overview records the product intent, scope, constraints, and cross-document decisions that contributors need when prioritizing work.
