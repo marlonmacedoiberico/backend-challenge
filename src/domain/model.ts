@@ -1,5 +1,12 @@
 export type AppointmentStatus = 'scheduled' | 'confirmed' | 'cancelled';
-export type ReminderStatus = 'pending' | 'sending' | 'retry' | 'sent' | 'failed' | 'skipped' | 'cancelled';
+export type ReminderStatus =
+  | 'pending'
+  | 'sending'
+  | 'retry'
+  | 'sent'
+  | 'failed'
+  | 'skipped'
+  | 'cancelled';
 export type SkipReason = 'too_late' | 'no_phone' | 'opted_out';
 
 export interface Clinic {

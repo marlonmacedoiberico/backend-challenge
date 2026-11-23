@@ -34,7 +34,10 @@ export async function runMigrations(pool: Pool): Promise<void> {
 
       try {
         await client.query(sql);
-        await client.query('INSERT INTO schema_migrations (version) VALUES ($1)', [file]);
+        await client.query(
+          'INSERT INTO schema_migrations (version) VALUES ($1)',
+          [file],
+        );
         await client.query('COMMIT');
         console.log(`Applied migration ${file}`);
       } catch (error) {

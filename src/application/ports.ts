@@ -71,11 +71,16 @@ export interface DataTransaction {
   createReminder(reminder: NewReminder): Promise<Reminder>;
   updateReminder(reminder: Reminder): Promise<void>;
   cancelOutstandingReminders(appointmentId: string): Promise<void>;
-  recordInboundMessageIfNew(message: InboundMessage, processedAt: Date): Promise<boolean>;
+  recordInboundMessageIfNew(
+    message: InboundMessage,
+    processedAt: Date,
+  ): Promise<boolean>;
 }
 
 export interface ClinicSayRepository {
-  transaction<T>(operation: (transaction: DataTransaction) => Promise<T>): Promise<T>;
+  transaction<T>(
+    operation: (transaction: DataTransaction) => Promise<T>,
+  ): Promise<T>;
   getAppointmentContext(id: string): Promise<AppointmentContext | null>;
   claimDueReminders(now: Date): Promise<ClaimedReminder[]>;
 }

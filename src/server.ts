@@ -1,4 +1,8 @@
-import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
+import {
+  createServer,
+  type IncomingMessage,
+  type ServerResponse,
+} from 'node:http';
 import { Pool } from 'pg';
 import { ClinicSayApplication } from './application/clinic-say-application.js';
 import { DeliveryService } from './application/services/delivery-service.js';
@@ -6,26 +10,39 @@ import { SchedulerService } from './application/services/scheduler-service.js';
 import { ApplicationError } from './domain/errors.js';
 import type { AppointmentContext, ReminderStatus } from './domain/model.js';
 import { ControllableClock, SystemClock } from './infrastructure/clock.js';
-import { HttpMessageProvider } from './infrastructure/messaging/http-message-provider.js';
-import { PostgresClinicSayRepository } from './infrastructure/postgres/postgres-repository.js';
+import {
+  HttpMessageProvider,
+} from './infrastructure/messaging/http-message-provider.js';
+import {
+  PostgresClinicSayRepository,
+} from './infrastructure/postgres/postgres-repository.js';
 import { runMigrations } from './storage/migrate.js';
 
-const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const uuidPattern = new RegExp(
+  '^[0-9a-f]{8}-[0-9a-f]{4}-' +
+  '[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$',
+  'i',
+);
 const port = Number(process.env.PORT ?? 3000);
 const databaseUrl = process.env.DATABASE_URL;
 if (!databaseUrl) throw new Error('DATABASE_URL is required');
 
 const pool = new Pool({ connectionString: databaseUrl });
-const testClock = process.env.CLOCK_MODE === 'test' ? new ControllableClock() : null;
+const testClock =
+  process.env.CLOCK_MODE === 'test' ? new ControllableClock() : null;
 const clock = testClock ?? new SystemClock();
 const repository = new PostgresClinicSayRepository(pool);
-const provider = new HttpMessageProvider(process.env.PROVIDER_URL ?? 'http://localhost:4010');
+const provider = new HttpMessageProvider(
+  process.env.PROVIDER_URL ?? 'http://localhost:4010',
+);
 const delivery = new DeliveryService(repository, clock, provider);
 const scheduler = new SchedulerService(repository, clock, delivery);
 const app = new ClinicSayApplication(repository, clock, scheduler);
 
 function json(response: ServerResponse, status: number, body: unknown): void {
-  response.writeHead(status, { 'content-type': 'application/json; charset=utf-8' });
+  response.writeHead(status, {
+    'content-type': 'application/json; charset=utf-8',
+  });
   response.end(JSON.stringify(body));
 }
 
@@ -47,7 +64,9 @@ function serializeAppointment(context: AppointmentContext) {
   };
 }
 
-function apiReminderStatus(status: ReminderStatus): 'pending' | 'sent' | 'failed' | 'skipped' | 'cancelled' {
+function apiReminderStatus(
+  status: ReminderStatus,
+): 'pending' | 'sent' | 'failed' | 'skipped' | 'cancelled' {
   return status === 'sending' || status === 'retry' ? 'pending' : status;
 }
 
@@ -57,7 +76,9 @@ async function readJson(request: IncomingMessage): Promise<unknown> {
   for await (const chunk of request) {
     const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
     size += buffer.length;
-    if (size > 1024 * 1024) throw new ApplicationError('validation', 'request body is too large');
+    if (size > 1024 * 1024) {
+      throw new ApplicationError('validation', 'request body is too large');
+    }
     chunks.push(buffer);
   }
   try {
@@ -68,15 +89,27 @@ async function readJson(request: IncomingMessage): Promise<unknown> {
 }
 
 function objectBody(value: unknown): Record<string, unknown> {
-  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
-    throw new ApplicationError('validation', 'request body must be a JSON object');
+  if (
+    typeof value !== 'object' ||
+    value === null ||
+    Array.isArray(value)
+  ) {
+    throw new ApplicationError(
+      'validation',
+      'request body must be a JSON object',
+    );
   }
   return value as Record<string, unknown>;
 }
 
 function requiredString(body: Record<string, unknown>, key: string): string {
   const value = body[key];
-  if (typeof value !== 'string' || !value.trim()) throw new ApplicationError('validation', `${key} must be a non-empty string`);
+  if (typeof value !== 'string' || !value.trim()) {
+    throw new ApplicationError(
+      'validation',
+      `${key} must be a non-empty string`,
+    );
+  }
   return value;
 }
 
@@ -90,9 +123,16 @@ function requiredUuid(body: Record<string, unknown>, key: string): string {
 
 function requiredDate(body: Record<string, unknown>, key: string): Date {
   const value = requiredString(body, key);
-  if (!/(?:Z|[+-]\d{2}:\d{2})$/i.test(value)) throw new ApplicationError('validation', `${key} must include a timezone`);
+  if (!/(?:Z|[+-]\d{2}:\d{2})$/i.test(value)) {
+    throw new ApplicationError('validation', `${key} must include a timezone`);
+  }
   const date = new Date(value);
-  if (!Number.isFinite(date.getTime())) throw new ApplicationError('validation', `${key} must be a valid date-time`);
+  if (!Number.isFinite(date.getTime())) {
+    throw new ApplicationError(
+      'validation',
+      `${key} must be a valid date-time`,
+    );
+  }
   return date;
 }
 
@@ -100,7 +140,10 @@ function routeId(pathname: string, pattern: RegExp): string | null {
   return pattern.exec(pathname)?.[1] ?? null;
 }
 
-async function handle(request: IncomingMessage, response: ServerResponse): Promise<void> {
+async function handle(
+  request: IncomingMessage,
+  response: ServerResponse,
+): Promise<void> {
   const url = new URL(request.url ?? '/', 'http://localhost');
   const path = url.pathname;
   const method = request.method ?? 'GET';
@@ -111,7 +154,11 @@ async function handle(request: IncomingMessage, response: ServerResponse): Promi
         SELECT EXISTS (SELECT 1 FROM schema_migrations)
           AND to_regclass('public.clinics') IS NOT NULL AS ready
       `);
-      if (!readiness.rows[0]?.ready) return json(response, 503, { error: 'database migrations are not ready' });
+      if (!readiness.rows[0]?.ready) {
+        return json(response, 503, {
+          error: 'database migrations are not ready',
+        });
+      }
       return json(response, 200, { ok: true });
     } catch {
       return json(response, 503, { error: 'database is not ready' });
@@ -120,17 +167,32 @@ async function handle(request: IncomingMessage, response: ServerResponse): Promi
 
   if (method === 'POST' && path === '/clinics') {
     const body = objectBody(await readJson(request));
-    const clinic = await app.createClinic(requiredString(body, 'name'), requiredString(body, 'timezone'));
-    return json(response, 201, { id: clinic.id, name: clinic.name, timezone: clinic.timezone });
+    const clinic = await app.createClinic(
+      requiredString(body, 'name'),
+      requiredString(body, 'timezone'),
+    );
+    return json(response, 201, {
+      id: clinic.id,
+      name: clinic.name,
+      timezone: clinic.timezone,
+    });
   }
 
   if (method === 'POST' && path === '/patients') {
     const body = objectBody(await readJson(request));
-    if (typeof body.acceptsReminders !== 'boolean') throw new ApplicationError('validation', 'acceptsReminders must be a boolean');
+    if (typeof body.acceptsReminders !== 'boolean') {
+      throw new ApplicationError(
+        'validation',
+        'acceptsReminders must be a boolean',
+      );
+    }
     const patient = await app.createPatient({
       clinicId: requiredUuid(body, 'clinicId'),
       name: requiredString(body, 'name'),
-      phone: body.phone === undefined || body.phone === null ? null : requiredString(body, 'phone'),
+      phone:
+        body.phone === undefined || body.phone === null
+          ? null
+          : requiredString(body, 'phone'),
       acceptsReminders: body.acceptsReminders,
     });
     return json(response, 201, {
@@ -150,17 +212,30 @@ async function handle(request: IncomingMessage, response: ServerResponse): Promi
   }
 
   const appointmentId = routeId(path, /^\/appointments\/([^/]+)$/);
-  if (appointmentId && !uuidPattern.test(appointmentId)) return json(response, 404, { error: 'not found' });
-  if (appointmentId && method === 'GET') return json(response, 200, serializeAppointment(await app.getAppointment(appointmentId)));
+  if (appointmentId && !uuidPattern.test(appointmentId)) {
+    return json(response, 404, { error: 'not found' });
+  }
+  if (appointmentId && method === 'GET') {
+    const context = await app.getAppointment(appointmentId);
+    return json(response, 200, serializeAppointment(context));
+  }
   if (appointmentId && method === 'PATCH') {
     const body = objectBody(await readJson(request));
-    const context = await app.reschedulerService.reschedule(appointmentId, requiredDate(body, 'startsAt'));
+    const context = await app.reschedulerService.reschedule(
+      appointmentId,
+      requiredDate(body, 'startsAt'),
+    );
     return json(response, 200, serializeAppointment(context));
   }
 
   const cancelId = routeId(path, /^\/appointments\/([^/]+)\/cancel$/);
-  if (cancelId && !uuidPattern.test(cancelId)) return json(response, 404, { error: 'not found' });
-  if (cancelId && method === 'POST') return json(response, 200, serializeAppointment(await app.cancellationService.cancel(cancelId)));
+  if (cancelId && !uuidPattern.test(cancelId)) {
+    return json(response, 404, { error: 'not found' });
+  }
+  if (cancelId && method === 'POST') {
+    const context = await app.cancellationService.cancel(cancelId);
+    return json(response, 200, serializeAppointment(context));
+  }
 
   if (method === 'POST' && path === '/jobs/reminders/run') {
     const processed = await scheduler.runDueReminders();
@@ -171,18 +246,25 @@ async function handle(request: IncomingMessage, response: ServerResponse): Promi
     const body = objectBody(await readJson(request));
     const receivedAt = requiredDate(body, 'receivedAt');
     const senderPhone = requiredString(body, 'from');
-    if (!/^\+[1-9]\d{7,14}$/.test(senderPhone)) throw new ApplicationError('validation', 'from must be an E.164 number');
+    if (!/^\+[1-9]\d{7,14}$/.test(senderPhone)) {
+      throw new ApplicationError('validation', 'from must be an E.164 number');
+    }
+    if (typeof body.text !== 'string') {
+      throw new ApplicationError('validation', 'text must be a string');
+    }
     await app.receiveInboundMessage({
       messageId: requiredString(body, 'messageId'),
       from: senderPhone,
-      text: typeof body.text === 'string' ? body.text : (() => { throw new ApplicationError('validation', 'text must be a string'); })(),
+      text: body.text,
       receivedAt,
     });
     return json(response, 200, { ok: true });
   }
 
   if (method === 'PUT' && path === '/test/clock') {
-    if (!testClock) return json(response, 404, { error: 'not found' });
+    if (!testClock) {
+      return json(response, 404, { error: 'not found' });
+    }
     const body = objectBody(await readJson(request));
     testClock.set(requiredDate(body, 'now'));
     response.writeHead(204);
@@ -196,7 +278,12 @@ async function handle(request: IncomingMessage, response: ServerResponse): Promi
 const server = createServer((request, response) => {
   void handle(request, response).catch((error: unknown) => {
     if (error instanceof ApplicationError) {
-      const status = error.code === 'validation' ? 400 : error.code === 'not_found' ? 404 : 409;
+      const status =
+        error.code === 'validation'
+          ? 400
+          : error.code === 'not_found'
+            ? 404
+            : 409;
       return json(response, status, { error: error.message });
     }
     console.error('Request failed:', error);
@@ -206,7 +293,9 @@ const server = createServer((request, response) => {
 
 async function start(): Promise<void> {
   await runMigrations(pool);
-  server.listen(port, '0.0.0.0', () => console.log(`ClinicSay API listening on :${port}`));
+  server.listen(port, '0.0.0.0', () => {
+    console.log(`ClinicSay API listening on :${port}`);
+  });
 }
 
 async function shutdown(): Promise<void> {

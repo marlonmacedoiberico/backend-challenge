@@ -1,7 +1,18 @@
 import { randomUUID } from 'node:crypto';
-import type { Clock, ClaimedReminder, ClinicSayRepository, DataTransaction } from '../ports.js';
-import type { AppointmentContext, Clinic, Reminder } from '../../domain/model.js';
-import { applyInitialQuietHours, reminderTimeBefore } from '../../domain/time.js';
+import type {
+  Clock,
+  ClaimedReminder,
+  ClinicSayRepository,
+  DataTransaction,
+} from '../ports.js';
+import type {
+  AppointmentContext,
+  Reminder,
+} from '../../domain/model.js';
+import {
+  applyInitialQuietHours,
+  reminderTimeBefore,
+} from '../../domain/time.js';
 import { DeliveryService } from './delivery-service.js';
 
 export class SchedulerService {
@@ -12,12 +23,23 @@ export class SchedulerService {
     private readonly newId: () => string = randomUUID,
   ) {}
 
-  async schedule(context: AppointmentContext, transaction: DataTransaction): Promise<Reminder> {
+  async schedule(
+    context: AppointmentContext,
+    transaction: DataTransaction,
+  ): Promise<Reminder> {
     const now = this.clock.now();
-    const normalTime = reminderTimeBefore(context.appointment.startsAt, context.clinic.timezone);
-    const initialTime = normalTime.getTime() <= now.getTime() ? now : normalTime;
-    const scheduledFor = applyInitialQuietHours(initialTime, context.clinic.timezone);
-    const isTooLate = scheduledFor.getTime() >= context.appointment.startsAt.getTime();
+    const normalTime = reminderTimeBefore(
+      context.appointment.startsAt,
+      context.clinic.timezone,
+    );
+    const initialTime =
+      normalTime.getTime() <= now.getTime() ? now : normalTime;
+    const scheduledFor = applyInitialQuietHours(
+      initialTime,
+      context.clinic.timezone,
+    );
+    const isTooLate =
+      scheduledFor.getTime() >= context.appointment.startsAt.getTime();
 
     return transaction.createReminder({
       id: this.newId(),

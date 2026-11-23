@@ -10,13 +10,21 @@ export class HttpMessageProvider implements MessageProvider {
 
   async send(message: OutboundMessage): Promise<ProviderResult> {
     try {
-      const response = await this.fetcher(`${this.baseUrl.replace(/\/$/, '')}/messages`, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json', 'Idempotency-Key': message.idempotencyKey },
-        body: JSON.stringify({ to: message.to, text: message.text }),
-        signal: AbortSignal.timeout(this.timeoutMs),
-      });
-      if (response.status === 200 || response.status === 202) return { kind: 'accepted' };
+      const response = await this.fetcher(
+        `${this.baseUrl.replace(/\/$/, '')}/messages`,
+        {
+          method: 'POST',
+          headers: {
+            'content-type': 'application/json',
+            'Idempotency-Key': message.idempotencyKey,
+          },
+          body: JSON.stringify({ to: message.to, text: message.text }),
+          signal: AbortSignal.timeout(this.timeoutMs),
+        },
+      );
+      if (response.status === 200 || response.status === 202) {
+        return { kind: 'accepted' };
+      }
       if (response.status === 422) return { kind: 'rejected' };
       return { kind: 'retryable' };
     } catch {

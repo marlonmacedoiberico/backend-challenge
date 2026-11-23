@@ -1,4 +1,9 @@
-import type { Clock, ClaimedReminder, ClinicSayRepository, MessageProvider } from '../ports.js';
+import type {
+  Clock,
+  ClaimedReminder,
+  ClinicSayRepository,
+  MessageProvider,
+} from '../ports.js';
 import type { Reminder } from '../../domain/model.js';
 import { formatAppointmentLocal } from '../../domain/time.js';
 
@@ -14,34 +19,64 @@ export class DeliveryService {
     const reminder = claim.reminder;
     const now = this.clock.now();
 
-    if (appointment.status === 'cancelled' || reminder.appointmentVersion !== appointment.version) {
+    if (
+      appointment.status === 'cancelled' ||
+      reminder.appointmentVersion !== appointment.version
+    ) {
       await this.save({ ...reminder, status: 'cancelled', skipReason: null });
       return;
     }
     if (appointment.startsAt.getTime() <= now.getTime()) {
-      await this.save({ ...reminder, status: 'skipped', skipReason: 'too_late' });
+      await this.save({
+        ...reminder,
+        status: 'skipped',
+        skipReason: 'too_late',
+      });
       return;
     }
     if (!patient.phone) {
-      await this.save({ ...reminder, status: 'skipped', skipReason: 'no_phone' });
+      await this.save({
+        ...reminder,
+        status: 'skipped',
+        skipReason: 'no_phone',
+      });
       return;
     }
     if (!patient.acceptsReminders) {
-      await this.save({ ...reminder, status: 'skipped', skipReason: 'opted_out' });
+      await this.save({
+        ...reminder,
+        status: 'skipped',
+        skipReason: 'opted_out',
+      });
       return;
     }
 
-    const { date, time } = formatAppointmentLocal(appointment.startsAt, clinic.timezone);
-    const text = `Hola ${patient.name}, te recordamos tu cita en ${clinic.name} el ${date} a las ${time}. Responde SI para confirmar o NO para cancelar.`;
+    const { date, time } = formatAppointmentLocal(
+      appointment.startsAt,
+      clinic.timezone,
+    );
+    const text =
+      `Hola ${patient.name}, te recordamos tu cita en ${clinic.name} ` +
+      `el ${date} a las ${time}. Responde SI para confirmar o NO para ` +
+      'cancelar.';
     let outcome;
     try {
-      outcome = await this.provider.send({ to: patient.phone, text, idempotencyKey: reminder.id });
+      outcome = await this.provider.send({
+        to: patient.phone,
+        text,
+        idempotencyKey: reminder.id,
+      });
     } catch {
       outcome = { kind: 'retryable' as const };
     }
 
     if (outcome.kind === 'accepted') {
-      await this.save({ ...reminder, status: 'sent', sentAt: this.clock.now(), skipReason: null });
+      await this.save({
+        ...reminder,
+        status: 'sent',
+        sentAt: this.clock.now(),
+        skipReason: null,
+      });
       return;
     }
     if (outcome.kind === 'rejected' || reminder.attempts >= 3) {
@@ -53,12 +88,16 @@ export class DeliveryService {
     await this.save({
       ...reminder,
       status: 'retry',
-      scheduledFor: new Date(this.clock.now().getTime() + delayMinutes * 60_000),
+      scheduledFor: new Date(
+        this.clock.now().getTime() + delayMinutes * 60_000,
+      ),
       skipReason: null,
     });
   }
 
   private async save(reminder: Reminder): Promise<void> {
-    await this.repository.transaction(async (transaction) => transaction.updateReminder(reminder));
+    await this.repository.transaction(async (transaction) =>
+      transaction.updateReminder(reminder),
+    );
   }
 }
