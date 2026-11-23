@@ -24,11 +24,11 @@ The evaluated HTTP surface is defined by [openapi.yaml](../../openapi.yaml): cre
 
 An appointment starts as `scheduled`, may become `confirmed` or `cancelled`, and cannot be rescheduled after cancellation or after it has started. Its internal version starts at `1` when created and increments automatically on each reschedule. The version is persistence-only: clients do not provide it when creating an appointment, and it is not included in appointment API responses. Each reminder stores the internal appointment version it belongs to so stale work can be rejected; `appointmentVersion` is also persistence-only and is not exposed through the API. Rescheduling invalidates outstanding reminders, creates a reminder for the new version, and clears a previous confirmation. Cancellation stops outstanding reminders while preserving sent history.
 
-Reminder timing, quiet hours, eligibility, message text, retry delays, provider outcomes, and reply normalization are detailed in [reminder-rules.md](../specs/reminder-rules.md) and the challenge statement. Preserve the challenge's Spain-specific local-time and daylight-saving behavior. The provider in `provider/` is fixed evaluation infrastructure and must not be modified.
+Reminder timing, quiet hours, eligibility, message text, retry delays, provider outcomes, and reply normalization are detailed in [reminder-rules.md](../specs/reminder-rules.md) and the challenge statement. Quiet hours apply to the initial reminder send; they do not delay retries. Preserve the challenge's Spain-specific local-time and daylight-saving behavior. The provider in `provider/` is fixed evaluation infrastructure and must not be modified.
 
 ## Out of Scope
 
-The challenge does not require authentication, a front end, editing clinics or patients, pagination, or a real messaging provider. Production cron scheduling and production deployment are discussion topics for the README, not deliverables in the evaluated service.
+The challenge does not require authentication, a front end, additional clinic or patient CRUD endpoints, pagination, or a real messaging provider. Clinic and patient HTTP resources remain creation-only as defined by `openapi.yaml`; do not add endpoints to list, retrieve, update, or delete them. Production cron scheduling and production deployment are discussion topics for the README, not deliverables in the evaluated service.
 
 ## Technology and Delivery Constraints
 
@@ -38,9 +38,7 @@ Use Node.js 22 or newer, TypeScript, and PostgreSQL. The service runs on port `3
 
 These items need to be reconciled before the contract, implementation, and documentation can be considered aligned:
 
-1. **Resolve retry quiet-hours drift.** The challenge says retries do not wait for the 21:00-09:00 quiet period, while `reminder-rules.md` says quiet hours apply to retries. Align the reminder rules with the challenge behavior.
-2. **Define inbound reply tie-breaking.** Replies target the most recently reminded eligible appointment for the sender's phone number. Specify what happens when multiple eligible appointments have the same latest reminder time, and record the chosen rule in the requirements and acceptance tests.
-3. **Separate decisions from unanswered questions.** `MISSING_REQS.md` currently mixes confirmed setup decisions with unresolved work. Keep confirmed decisions in product/requirements documentation and reserve that file for genuine open questions, including the CRUD-service wording below.
-4. **Clarify the CRUD request.** Existing steering asks for CRUD services for clinics, patients, and appointments, but the challenge does not require clinic/patient editing and the API contract exposes only their creation. Confirm whether the additional CRUD refers to internal service methods or extra HTTP endpoints; do not expand the evaluated API without a decision.
+1. **Define inbound reply tie-breaking.** Replies target the most recently reminded eligible appointment for the sender's phone number. Specify what happens when multiple eligible appointments have the same latest reminder time, and record the chosen rule in the requirements and acceptance tests.
+2. **Separate decisions from unanswered questions.** `MISSING_REQS.md` currently mixes confirmed setup decisions with unresolved work. Keep confirmed decisions in product/requirements documentation and reserve that file for genuine open questions.
 
 Keep detailed behavioral rules in the requirements and API documents. This overview records the product intent, scope, constraints, and cross-document decisions that contributors need when prioritizing work.
