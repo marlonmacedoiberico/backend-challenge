@@ -1,44 +1,56 @@
-# Prueba técnica de backend · ClinicSay
+# ClinicSay Backend
 
-El enunciado está en [`enunciado.pdf`](enunciado.pdf). Aquí tienes el contrato de la API (`openapi.yaml`), el
-proveedor de mensajes simulado (`provider/`) y el `docker-compose.yml` de partida.
+Submit the challenge through the [delivery form](https://docs.google.com/forms/d/e/1FAIpQLSd6OqQxPRvpBz_Cxw8KgOhN9-fsv5idE83PYGsH861BaMITCQ/viewform) by Wednesday, November 25, 2026, at 17:30 Madrid time (11:30 Lima time).
 
-Se entrega con el [formulario de entrega](https://docs.google.com/forms/d/e/1FAIpQLSd6OqQxPRvpBz_Cxw8KgOhN9-fsv5idE83PYGsH861BaMITCQ/viewform) hasta el miércoles 25 de noviembre de 2026 a las 17:30 de
-Madrid (11:30 en Lima).
+Backend for the ClinicSay appointment-reminder challenge. The challenge statement is available in [`enunciado.pdf`](enunciado.pdf), and [`openapi.yaml`](openapi.yaml) defines the HTTP contract. Product requirements and design decisions live under `.ai/steering/` and `.ai/specs/`.
 
-## Desarrollo local
+## Local stack
 
-Necesitas Docker Desktop con Docker Compose. Para construir y levantar la API, PostgreSQL y el proveedor simulado:
+Requires Docker Desktop with Docker Compose. Build and start the API, PostgreSQL, and the supplied messaging-provider simulator:
 
 ```sh
 docker compose up --build
 ```
 
-La API queda en `http://localhost:3000`, el proveedor simulado en `http://localhost:4010` y PostgreSQL en `localhost:5433`. La primera vez, PostgreSQL crea la base `clinicsay`; la API aplica las migraciones antes de empezar a escuchar. Comprueba que la API está lista con `GET http://localhost:3000/health`.
+The API listens on `http://localhost:3000`, the provider simulator on `http://localhost:4010`, and PostgreSQL on `localhost:5433`. The API runs database migrations before listening. Check readiness with `GET http://localhost:3000/health`.
 
-La conexión interna de la API usa `DATABASE_URL=postgresql://clinicsay:clinicsay@db:5432/clinicsay`. El usuario y la contraseña incluidos en Compose son solo para desarrollo local. Las variables de la API son:
+The local Compose configuration uses `CLOCK_MODE=test`, so backend time can be set with `PUT /test/clock`. When `CLOCK_MODE=test` is absent, the backend uses the system clock in UTC and the test-clock endpoint is unavailable. This setting concerns backend behavior; device-local time display is outside the scope of this API.
 
-| Variable | Valor local | Uso |
+| Variable | Local value | Purpose |
 |---|---|---|
-| `PORT` | `3000` | Puerto HTTP de la API |
-| `CLOCK_MODE` | `test` | Habilita el reloj controlable para la evaluación |
-| `PROVIDER_URL` | `http://provider:4010` | Dirección del proveedor simulado dentro de Compose |
-| `DATABASE_URL` | `postgresql://clinicsay:clinicsay@db:5432/clinicsay` | Conexión de la API a PostgreSQL |
+| `PORT` | `3000` | HTTP port |
+| `CLOCK_MODE` | `test` | Enables the controllable backend clock |
+| `PROVIDER_URL` | `http://provider:4010` | Provider URL from the API container |
+| `DATABASE_URL` | `postgresql://clinicsay:clinicsay@db:5432/clinicsay` | PostgreSQL connection |
 
-Para parar los servicios, ejecuta `docker compose down`. El volumen de PostgreSQL se conserva para la siguiente ejecución. El arranque inicial incluye la API base y el endpoint de salud; los demás endpoints del contrato están pendientes de implementación.
+Stop the stack with `docker compose down`. PostgreSQL data remains in its volume.
 
-## Pruebas y cobertura
+## Tests and coverage
 
-El runner de pruebas y los informes de cobertura están pendientes de configuración. Cuando se completen las tareas de [implementación de recordatorios](.ai/specs/tasks.md), los comandos previstos serán:
+Requires Node.js 22 or later and npm. Install dependencies and run the unit tests:
 
 ```sh
+npm install
 npm test
+```
+
+The tests use Node's built-in `node:test` runner and cover `SchedulerService`, `DeliveryService` (including retry behavior), `ReschedulerService`, `CancellationService`, and inbound-reply processing.
+
+Generate the same test run with coverage reports:
+
+```sh
 npm run test:coverage
 ```
 
-`npm test` ejecutará las pruebas unitarias. `npm run test:coverage` ejecutará la misma suite y mostrará un resumen de cobertura en la terminal. También generará:
+The command prints a coverage summary and writes:
 
-- `coverage/index.html`: informe navegable que se puede abrir en un navegador para revisar la cobertura por archivo, línea, rama y función.
-- `coverage/lcov.info`: informe LCOV para herramientas de CI y análisis de cobertura.
+- `coverage/index.html`: navigable report for file, line, branch, and function coverage.
+- `coverage/lcov.info`: LCOV data for CI and coverage-analysis tools.
 
-Estos comandos estarán disponibles cuando se configure el runner; todavía no se pueden ejecutar en este scaffold.
+Open `coverage/index.html` in a browser to inspect the report. TypeScript build output is written to `dist/`.
+
+## Implementation notes
+
+- The application follows Clean Architecture. Domain and application services depend on ports; PostgreSQL and HTTP provider integrations are infrastructure adapters.
+- Reminder scheduling and appointment display use the clinic's IANA time zone where applicable. API timestamps are returned as UTC instants.
+- The provider simulator in `provider/` is fixed for evaluation and must not be modified.
