@@ -2,20 +2,20 @@
 
 ## Goal and scope
 
-Implement the first backend increment around the reminder lifecycle, using the four application services below. Keep the evaluated HTTP API aligned with [`openapi.yaml`](../../openapi.yaml); do not add GUI work or clinic and patient endpoints beyond creation. Follow the Clean Architecture boundaries in [`design.md`](design.md).
+Implement the first backend increment around the reminder lifecycle, including inbound-message handling. Use the four reminder services and the inbound-reply application use case described below. Keep the evaluated HTTP API aligned with [`openapi.yaml`](../../openapi.yaml); do not add GUI work or clinic and patient endpoints beyond creation. Follow the Clean Architecture boundaries in [`design.md`](design.md).
 
 Use the [reminder rules](reminder-rules.md), [requirements](../steering/requirements.md), [product overview](../steering/product.md), and [challenge statement](../../enunciado.md) as the behavioral references. All test scenarios below are descriptions for unit tests; they do not prescribe implementation code.
 
-Task IDs (`T-001` onward) are stable traceability identifiers. The service sections below identify the functional requirements each group implements; the inbound-reply requirements are outside this first implementation increment.
+Task IDs (`T-001` onward) are stable traceability identifiers. The service and use-case sections below identify the functional requirements each group implements. Inbound replies are included in this increment.
 
 ## 1. Clean Architecture foundation
 
 - [ ] **T-066** Use [`candidate-layout.md`](candidate-layout.md) as an illustrative guide to separating domain, application/use cases, infrastructure, presentation, and tests. Translate its Python-specific examples into the repository's Node.js/TypeScript stack; follow the Clean Architecture dependency boundaries in [`design.md`](design.md), not a literal directory or language structure.
-- [ ] **T-001** Define domain entities and invariants for `Clinic`, `Patient`, `Appointment`, and `Reminder`. Include clinic time zone, patient reminder eligibility, appointment status/version, and reminder schedule/status/attempt data needed by the use cases.
-- [ ] **T-002** Define application ports for appointment and reminder persistence, the backend clock, and the messaging provider. Keep domain and application code independent of PostgreSQL, HTTP, and provider-specific types.
-- [ ] **T-003** Define transaction or atomic-claim behavior needed to ensure concurrent reminder runs do not deliver the same due reminder twice.
+- [ ] **T-001** Define domain entities and invariants for `Clinic`, `Patient`, `Appointment`, and `Reminder`. Include clinic time zone, patient reminder eligibility, appointment status/version, and reminder schedule/status/attempt data, including reminder `created_at` and `sent_at`, needed by the use cases. Follow the appointment-version rules in [`design.md`](design.md#appointment-versioning), including the initial version and each reminder's `appointmentVersion`.
+- [ ] **T-002** Define application ports for appointment, patient, clinic, reminder, and inbound-message persistence, the backend clock, and the messaging provider. Support atomic recognition of previously processed inbound `messageId` values. Keep domain and application code independent of PostgreSQL, HTTP, and provider-specific types.
+- [ ] **T-003** Define transaction or atomic-claim behavior needed to ensure concurrent reminder runs do not deliver the same due reminder twice and duplicate inbound messages are applied only once.
 - [ ] **T-004** Add infrastructure adapters for PostgreSQL persistence, the real UTC clock and controllable `CLOCK_MODE=test` clock, and the supplied messaging provider.
-- [ ] **T-067** Create PostgreSQL migrations for clinics, patients, appointments, and reminders, including the relationships and persisted fields required for appointment versioning, reminder attempts, retry scheduling, and reminder history.
+- [ ] **T-067** Create PostgreSQL migrations for clinics, patients, appointments, reminders, and inbound-message idempotency, including the relationships and persisted fields required for appointment versioning, reminder attempts, retry scheduling, reminder `created_at`/`sent_at` history, and unique inbound `messageId` processing.
 - [ ] **T-005** Keep HTTP handlers as thin adapters that validate/map the contract and call application services. Do not put reminder rules in route handlers.
 - [ ] **T-006** Add unit-test doubles for repositories, clock, transaction/claim behavior, and provider. Keep provider contract and `provider/server.mjs` unchanged.
 - [ ] **T-007** Configure a TypeScript-compatible test runner and coverage reporting, exposing `npm test` and `npm run test:coverage` scripts.
@@ -25,7 +25,7 @@ Task IDs (`T-001` onward) are stable traceability identifiers. The service secti
 
 Implement the operations already defined in [`openapi.yaml`](../../openapi.yaml). Treat the contract as authoritative for paths, payloads, response schemas, validation, and status codes; do not add routes.
 
-**Requirements:** [FR-001](../steering/requirements.md#api-contract), [FR-013–FR-015](../steering/requirements.md#inbound-replies), and [FR-016](../steering/requirements.md#backend-clock)
+**Requirements:** [FR-001](../steering/requirements.md#api-contract), [FR-013–FR-015](../steering/requirements.md#inbound-replies), and [FR-016–FR-017](../steering/requirements.md#backend-clock)
 
 - [ ] **T-057** Implement `GET /health` so it reports readiness only after the database is connected and migrations have completed, using the documented response.
 - [ ] **T-058** Implement `POST /clinics` and `POST /patients`, including request validation, persistence, clinic relationship checks, and the documented success and error responses.
@@ -33,9 +33,9 @@ Implement the operations already defined in [`openapi.yaml`](../../openapi.yaml)
 - [ ] **T-060** Implement `GET /appointments/{id}` to return the appointment with its reminder history ordered from oldest to newest, or the documented not-found response.
 - [ ] **T-061** Implement `PATCH /appointments/{id}` and `POST /appointments/{id}/cancel` as thin adapters over `ReschedulerService` and `CancellationService`, mapping service outcomes to the contract's response codes and bodies.
 - [ ] **T-062** Implement `POST /jobs/reminders/run` as an adapter over reminder processing; wait for the run to finish and return the documented `processed` count.
-- [ ] **T-063** Implement `POST /webhooks/inbound-messages` with the contract's request validation, duplicate-message handling, reply interpretation, appointment matching, and always-`200` handling for valid messages, including ignored messages. This endpoint depends on inbound-reply application logic beyond the four services in the initial reminder increment.
-- [ ] **T-064** Implement `PUT /test/clock` only when `CLOCK_MODE=test` is enabled, map its request to the controllable backend clock, and return the documented `204` response.
-- [ ] **T-065** Add API contract tests for every OpenAPI operation and its documented success, validation, not-found, and conflict responses. Verify response bodies and status codes against the schemas, and verify no undocumented routes are exposed.
+- [ ] **T-063** Implement `POST /webhooks/inbound-messages` as a thin adapter over the inbound-reply application use case. Validate the request, apply duplicate-message handling and reply interpretation, and return `200` for every valid message, including ignored messages.
+- [ ] **T-064** Implement `PUT /test/clock` according to [FR-016 and FR-017](../steering/requirements.md#backend-clock) and the [system-time design decision](design.md#system-time-and-time-display). Map the request to the controllable backend clock and return the documented `204` response when the endpoint is enabled.
+- [ ] **T-065** Add API contract tests for every OpenAPI operation and its documented success, validation, not-found, and conflict responses. Include the clock behavior scenarios below. Verify response bodies and status codes against the schemas, and verify no undocumented routes are exposed.
 
 ## 3. SchedulerService
 
@@ -123,11 +123,45 @@ Implement appointment cancellation and stopping of reminders that are still outs
 - [ ] **T-049** **CAN-03 — Repeating cancellation leaves state unchanged.** Given the appointment is already cancelled, when cancellation is requested again, then its state remains unchanged.
 - [ ] **T-050** **CAN-04 — A cancelled appointment is not delivered.** Given an appointment is cancelled before its reminder is delivered, when due work is processed, then the provider is not called.
 
-## Completion checks
+## 7. Inbound reply use case
 
-- [ ] **T-051** Each service's unit tests cover the scenarios listed above using test doubles for external ports.
+**Requirements:** [FR-013–FR-015](../steering/requirements.md#inbound-replies)
+
+Use the sender's phone number, backend clock, and reminder history to select an eligible appointment according to [`design.md`](design.md#inbound-reply-matching). Keep HTTP concerns in the webhook adapter and apply confirmation/cancellation through application-level behavior.
+
+- [ ] **T-087** Implement the inbound-reply application use case behind the webhook adapter, coordinating message normalization, eligible-appointment selection, confirmation or cancellation, and idempotent message processing through application ports.
+- [ ] **T-072** Normalize inbound reply text by trimming whitespace, removing surrounding punctuation, ignoring case, and treating accented and unaccented `SI` equivalently. Confirm the selected appointment for `SI`; cancel the appointment and its outstanding reminder for `NO`; ignore other text.
+- [ ] **T-073** Select among eligible appointments for the sender's phone number using sent reminders: choose the latest reminder `sent_at`; break ties by latest reminder `created_at`, then by greatest reminder `id` when both timestamps tie. Exclude cancelled appointments and appointments that have already started.
+- [ ] **T-074** Record inbound `messageId` processing atomically so repeated deliveries of the same webhook cannot apply the reply more than once.
+
+### Unit-test scenarios
+
+- [ ] **T-075** **INB-01 — A normalized SI reply confirms the selected appointment.** Given a valid inbound message containing `Sí`, `si.`, or whitespace and punctuation around `SI`, when it is processed, then the selected eligible appointment becomes `confirmed`.
+- [ ] **T-076** **INB-02 — A normalized NO reply cancels the selected appointment.** Given a valid inbound message containing `NO` in any letter case or with surrounding whitespace and punctuation, when it is processed, then the selected appointment and its outstanding reminder become `cancelled`.
+- [ ] **T-077** **INB-03 — Other reply text is ignored.** Given a valid inbound message with text other than `SI` or `NO`, when it is processed, then appointment and reminder states remain unchanged.
+- [ ] **T-078** **INB-04 — The latest sent reminder determines the target appointment.** Given multiple eligible appointments share the sender's phone number but have different latest reminder send times, when a reply is processed, then it applies to the appointment with the most recently sent reminder.
+- [ ] **T-079** **INB-05 — Reminder creation time breaks equal sent-time ties.** Given eligible reminders have the same `sent_at` but different `created_at` values, when a reply is processed, then it applies to the appointment associated with the reminder having the latest `created_at`.
+- [ ] **T-080** **INB-06 — Reminder ID breaks a complete timestamp tie.** Given eligible reminders have equal `sent_at` and `created_at` values, when a reply is processed, then it applies to the appointment associated with the greatest reminder `id`.
+- [ ] **T-081** **INB-07 — Ineligible appointments are excluded from reply matching.** Given matching appointments are cancelled or have already started, when a reply is processed, then those appointments are not selected; if none remain eligible, no appointment changes.
+- [ ] **T-082** **INB-08 — Duplicate inbound message IDs are applied once.** Given the provider delivers the same `messageId` more than once, when each webhook request is processed, then the reply affects appointment state only once.
+
+### Webhook API test scenarios
+
+- [ ] **T-083** **INB-09 — A valid but ignored message still receives HTTP 200.** Given a valid webhook whose text is unrecognized or has no eligible target, when the endpoint handles it, then it returns `200` without changing appointment state.
+- [ ] **T-084** **INB-10 — An invalid webhook body receives HTTP 400.** Given a webhook request missing required fields or containing invalid field values, when the endpoint validates it, then it returns the documented `400` response and does not process a reply.
+
+## 8. Clock behavior verification
+
+**Requirements:** [FR-016–FR-017](../steering/requirements.md#backend-clock)
+
+- [ ] **T-085** **CLK-01 — Test mode controls backend timestamps and time-dependent behavior.** Given the service runs with `CLOCK_MODE=test` and its clock is set through `PUT /test/clock`, when entities are created or updated, appointments are created or rescheduled, reminder jobs run, or inbound messages are processed, then backend-generated timestamps and time-dependent decisions use that configured time.
+- [ ] **T-086** **CLK-02 — Production mode uses UTC and does not expose the test-clock endpoint.** Given `CLOCK_MODE=test` is not configured, when the service starts and a client requests `PUT /test/clock`, then the service uses the system clock in UTC and the endpoint is unavailable.
+
+## 9. Completion checks
+
+- [ ] **T-051** Each reminder service and the inbound-reply use case have unit tests covering their scenarios, using test doubles for external ports. Verify the clock scenarios through the API contract tests.
 - [ ] **T-052** `npm test` runs the unit suite, and `npm run test:coverage` runs it with coverage reporting enabled.
 - [ ] **T-053** The README explains both commands, the report locations, and how to open and interpret the HTML and LCOV reports.
-- [ ] **T-054** Add focused PostgreSQL integration coverage later for persistence constraints and transaction-level concurrency; a unit test alone cannot prove database locking behavior.
+- [ ] **T-054** Add focused PostgreSQL integration coverage for persistence constraints and transaction-level concurrency, including competing reminder claims and duplicate inbound-message processing; unit tests alone cannot prove database locking behavior.
 - [ ] **T-055** Wire the use cases to the existing API contract and confirm no endpoints were added beyond `openapi.yaml`.
 - [ ] **T-056** Verify reminder behavior with `CLOCK_MODE=test` and leave GUI/device-local time display out of scope.

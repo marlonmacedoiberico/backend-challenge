@@ -4,7 +4,7 @@
 
 The requirements below capture the ClinicSay challenge behavior described in [`enunciado.pdf`](../../enunciado.pdf), using the API contract in [`openapi.yaml`](../../openapi.yaml) and confirmed project decisions where noted. Stable `FR-` identifiers support traceability from requirements to design and implementation tasks.
 
-The first implementation increment is limited to reminder functionality and the `SchedulerService`, `DeliveryService`, `ReschedulerService`, and `CancellationService`. Inbound-message handling remains part of the overall challenge contract but is not included in those first service tasks unless a later task explicitly adds it. This project does not include a GUI; device-local time display is outside backend scope.
+The first implementation increment covers reminder functionality, including inbound-message handling through the `SchedulerService`, `DeliveryService`, `ReschedulerService`, `CancellationService`, and inbound-reply application use cases. This project does not include a GUI; device-local time display is outside backend scope.
 
 ## API contract
 
@@ -30,10 +30,10 @@ The first implementation increment is limited to reminder functionality and the 
 ## Inbound replies
 
 - **FR-013 — Reply interpretation:** When an inbound message contains `SI` or `NO`, the system shall normalize case, accents, surrounding whitespace, and punctuation. `SI` shall confirm the applicable appointment; `NO` shall cancel it and its outstanding reminder. Other message text shall be ignored.
-- **FR-014 — Reply appointment matching:** The system shall apply a reply to the eligible appointment associated with the most recently sent reminder for the sender's phone number. If multiple eligible appointments share the latest reminder time, it shall select the reminder with the greatest database ID, as confirmed in [`design.md`](../specs/design.md). An eligible appointment has not started and is not cancelled. If no eligible appointment exists, the reply shall be ignored.
+- **FR-014 — Reply appointment matching:** The system shall apply a reply to the eligible appointment associated with the most recently sent reminder for the sender's phone number. If multiple eligible appointments share the latest `sent_at` time, it shall select the reminder with the latest `created_at`; if those timestamps also tie, it shall select the reminder with the greatest `id`, as specified in [`design.md`](../specs/design.md). An eligible appointment has not started and is not cancelled. If no eligible appointment exists, the reply shall be ignored.
 - **FR-015 — Inbound-message idempotency:** When the provider sends the same inbound `messageId` more than once, the system shall process it only once. The webhook shall respond `200` even when the message is ignored.
 
 ## Backend clock
 
-- **FR-016 — Controllable test clock:** When the service runs with `CLOCK_MODE=test`, `PUT /test/clock` shall set the backend clock used for appointment creation and rescheduling, reminder runs, and inbound webhook processing.
+- **FR-016 — Controllable test clock:** When the service runs with `CLOCK_MODE=test`, `PUT /test/clock` shall set the backend clock for time-dependent behavior and service-generated timestamps, including entity creation and updates, appointment creation and rescheduling, reminder-job processing, and inbound webhook processing.
 - **FR-017 — Production clock and time representation:** When `CLOCK_MODE=test` is not enabled, the backend shall use the system clock in UTC and shall not expose `PUT /test/clock`. The backend shall persist and compare timestamps as UTC instants, convert to clinic-local time only for applicable business rules, and return API timestamps in UTC with a `Z` suffix. `CLOCK_MODE=test` shall control backend behavior only; it shall not control the local time display of client devices.
