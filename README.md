@@ -26,3 +26,19 @@ La conexión interna de la API usa `DATABASE_URL=postgresql://clinicsay:clinicsa
 | `DATABASE_URL` | `postgresql://clinicsay:clinicsay@db:5432/clinicsay` | Conexión de la API a PostgreSQL |
 
 Para parar los servicios, ejecuta `docker compose down`. El volumen de PostgreSQL se conserva para la siguiente ejecución. El arranque inicial incluye la API base y el endpoint de salud; los demás endpoints del contrato están pendientes de implementación.
+
+## Pruebas y cobertura
+
+El runner de pruebas y los informes de cobertura están pendientes de configuración. Cuando se completen las tareas de [implementación de recordatorios](.ai/specs/tasks.md), los comandos previstos serán:
+
+```sh
+npm test
+npm run test:coverage
+```
+
+`npm test` ejecutará las pruebas unitarias. `npm run test:coverage` ejecutará la misma suite y mostrará un resumen de cobertura en la terminal. También generará:
+
+- `coverage/index.html`: informe navegable que se puede abrir en un navegador para revisar la cobertura por archivo, línea, rama y función.
+- `coverage/lcov.info`: informe LCOV para herramientas de CI y análisis de cobertura.
+
+Estos comandos estarán disponibles cuando se configure el runner; todavía no se pueden ejecutar en este scaffold.
