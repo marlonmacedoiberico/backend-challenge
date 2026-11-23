@@ -1,7 +1,4 @@
 
-
-
-
 Give instructions in the README.md on how to create the database using a docker image
 Of course the database structure must be created
 
@@ -13,4 +10,7 @@ To manage the rescheduling of an appointment
 
 As of appointment desing:
 @.ai\specs\appointment-version.md
+
+The Docker compose must include our application with
+the environment settings specified in  @docker-compose.yml
 
