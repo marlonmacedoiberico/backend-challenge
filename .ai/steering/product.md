@@ -26,6 +26,8 @@ An appointment starts as `scheduled`, may become `confirmed` or `cancelled`, and
 
 Reminder timing, quiet hours, eligibility, message text, retry delays, provider outcomes, and reply normalization are detailed in [reminder-rules.md](../specs/reminder-rules.md) and the challenge statement. Quiet hours apply to the initial reminder send; they do not delay retries. Preserve the challenge's Spain-specific local-time and daylight-saving behavior. The provider in `provider/` is fixed evaluation infrastructure and must not be modified.
 
+Inbound replies target the eligible appointment with the most recently sent reminder to that phone number. If eligible reminders share the same `sent_at` time, choose the appointment associated with the reminder row created most recently, ordered by `created_at` descending and then `id` descending for a deterministic final tie-break.
+
 ## Out of Scope
 
 The challenge does not require authentication, a front end, additional clinic or patient CRUD endpoints, pagination, or a real messaging provider. Clinic and patient HTTP resources remain creation-only as defined by `openapi.yaml`; do not add endpoints to list, retrieve, update, or delete them. Production cron scheduling and production deployment are discussion topics for the README, not deliverables in the evaluated service.
@@ -33,12 +35,5 @@ The challenge does not require authentication, a front end, additional clinic or
 ## Technology and Delivery Constraints
 
 Use Node.js 22 or newer, TypeScript, and PostgreSQL. The service runs on port `3000` with `CLOCK_MODE=test` and `PROVIDER_URL=http://provider:4010`. Docker Compose must start the API, database, and fixed provider; database migrations must run at startup, and `/health` must report ready only after the database is usable and migrated. The README must explain setup, database creation, tests, key design decisions, known omissions, and a production approach.
-
-## Alignment Gaps and Recommended Improvements
-
-These items need to be reconciled before the contract, implementation, and documentation can be considered aligned:
-
-1. **Define inbound reply tie-breaking.** Replies target the most recently reminded eligible appointment for the sender's phone number. Specify what happens when multiple eligible appointments have the same latest reminder time, and record the chosen rule in the requirements and acceptance tests.
-2. **Separate decisions from unanswered questions.** `MISSING_REQS.md` currently mixes confirmed setup decisions with unresolved work. Keep confirmed decisions in product/requirements documentation and reserve that file for genuine open questions.
 
 Keep detailed behavioral rules in the requirements and API documents. This overview records the product intent, scope, constraints, and cross-document decisions that contributors need when prioritizing work.

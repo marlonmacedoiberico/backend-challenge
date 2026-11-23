@@ -8,6 +8,12 @@ The backend must follow Clean Architecture. Keep domain and application logic in
 
 The evaluated API follows [`openapi.yaml`](../../openapi.yaml). Clinic and patient resources support creation only. Do not add endpoints to list, retrieve, update, or delete clinics or patients, or otherwise expand the API beyond the challenge contract.
 
+## System Time and Time Display
+
+When `CLOCK_MODE=test` is not configured, the backend uses the system clock in UTC. Treat timestamps as UTC instants for persistence and comparison, converting to a clinic's local time only where business rules require it.
+
+This project does not include a GUI. How time is displayed on a phone, laptop, tablet, or other client device is outside the backend's scope and follows that device's local settings. `CLOCK_MODE=test` provides a controllable clock for testing backend behavior; it does not control or specify time display in user interfaces.
+
 ## Appointment Versioning
 
 Appointment versions support safe reminder handling after rescheduling:
@@ -22,6 +28,10 @@ See [appointment-version.md](appointment-version.md) for an example of how versi
 ## Reminder Quiet Hours and Retries
 
 Quiet hours run from 21:00 to 09:00 in the clinic's local time. They apply to the initial reminder send: if it falls during quiet hours, defer it until 09:00. Retries do not wait for quiet hours to end, as specified in [`enunciado.md`](../../enunciado.md). A retry is still skipped as `too_late` if the appointment has already started.
+
+## Inbound Reply Matching
+
+The challenge applies an inbound reply to the eligible appointment whose reminder was sent most recently to the sender's phone number. If multiple eligible appointments have reminders with the same `sent_at` time, apply the reply to the appointment associated with the reminder record created most recently in the database. Order by `created_at` descending; if those timestamps also tie, order by reminder `id` descending for a deterministic result. Reminder IDs are UUIDs and do not, by themselves, indicate creation order.
 
 ## Database and Local Setup
 
