@@ -26,19 +26,22 @@
           <mxGeometry height="30" width="110" x="160" y="210" as="geometry" />
         </mxCell>
         <mxCell id="7qzY4dfjysZc7TDAlyMK-10" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="CRUD OF APPOINTMENTS" vertex="1">
-          <mxGeometry height="110" width="720" x="167" y="460" as="geometry" />
+          <mxGeometry height="110" width="720" x="167" y="576" as="geometry" />
         </mxCell>
         <mxCell id="7qzY4dfjysZc7TDAlyMK-11" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="CRUD OF PATIENTS" vertex="1">
-          <mxGeometry height="80" width="720" x="167" y="580" as="geometry" />
+          <mxGeometry height="80" width="720" x="167" y="696" as="geometry" />
         </mxCell>
         <mxCell id="7qzY4dfjysZc7TDAlyMK-12" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="CRUD OF CLINICS" vertex="1">
-          <mxGeometry height="80" width="720" x="167" y="670" as="geometry" />
+          <mxGeometry height="80" width="720" x="167" y="786" as="geometry" />
         </mxCell>
         <mxCell id="7qzY4dfjysZc7TDAlyMK-13" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="LIST OF REMINDERS (Table of reminders)" vertex="1">
           <mxGeometry height="110" width="720" x="170" y="340" as="geometry" />
         </mxCell>
         <mxCell id="7qzY4dfjysZc7TDAlyMK-14" parent="1" style="rounded=1;whiteSpace=wrap;html=1;roundedPerimeter=1;" value="Refresh All" vertex="1">
           <mxGeometry height="30" width="120" x="770" y="20" as="geometry" />
+        </mxCell>
+        <mxCell id="7qzY4dfjysZc7TDAlyMK-15" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="&lt;div&gt;/admin/messages&lt;/div&gt;&lt;div&gt;&amp;nbsp; &amp;nbsp; /admin/requests&lt;/div&gt;&lt;div&gt;&amp;nbsp; &amp;nbsp; /admin/reset&lt;/div&gt;" vertex="1">
+          <mxGeometry height="110" width="720" x="170" y="458" as="geometry" />
         </mxCell>
       </root>
     </mxGraphModel>
