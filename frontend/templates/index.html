@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ClinicSay · Test console</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+  <script src="{{ url_for('static', filename='app.js') }}" defer></script>
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <p class="eyebrow">LOCAL DEVELOPMENT TOOL</p>
+      <h1>ClinicSay <span>Test console</span></h1>
+    </div>
+    <form action="{{ url_for('refresh') }}" method="post">
+      <button class="button button-primary" type="submit">Refresh All</button>
+    </form>
+  </header>
+
+  <main class="dashboard">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <section class="notices" aria-live="polite" aria-label="Notifications">
+          {% for category, message in messages %}
+            <p class="notice notice-{{ category }}">{{ message }}</p>
+          {% endfor %}
+        </section>
+      {% endif %}
+    {% endwith %}
+
+    <section class="panel clock-panel" aria-labelledby="clock-heading">
+      <div class="panel-heading">
+        <div><p class="eyebrow">BACKEND TIME</p><h2 id="clock-heading">Test clock <span class="timezone">UTC</span></h2></div>
+        <p class="clock-state">{% if clock_value %}Last set: <strong>{{ clock_value }}</strong>{% else %}Current value: <strong>unknown</strong>{% endif %}</p>
+      </div>
+      <form class="inline-form" action="{{ url_for('set_clock') }}" method="post">
+        <label>Date <input type="date" name="date" required></label>
+        <label>Time <input type="time" name="time" step="1" value="00:00:00" required></label>
+        <button class="button button-primary" type="submit">Set clock</button>
+      </form>
+    </section>
+
+    <section class="panel job-panel" aria-labelledby="job-heading">
+      <div class="panel-heading">
+        <div><p class="eyebrow">SCHEDULER</p><h2 id="job-heading">Reminder job</h2></div>
+        <form action="{{ url_for('run_reminders') }}" method="post">
+          <button class="button button-primary" type="submit">Run due reminders</button>
+        </form>
+      </div>
+      <p class="subtle">Processes every reminder due at the backend clock time.</p>
+    </section>
+
+    <section class="panel table-panel" aria-labelledby="reminder-heading">
+      <div class="panel-heading">
+        <div><p class="eyebrow">DELIVERY QUEUE</p><h2 id="reminder-heading">Reminders <span class="count">{{ reminders|length }}</span></h2></div>
+        <span class="subtle">Replies are submitted as simulated inbound messages.</span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Scheduled for (UTC)</th><th>Patient</th><th>Appointment</th><th>Status</th><th>Attempts</th><th>Sent at</th><th>Action</th></tr></thead>
+          <tbody>
+          {% for reminder in reminders %}
+            {% set appt = appointment_by_id.get(reminder.appointmentId, {}) %}
+            {% set patient = patient_by_id.get(reminder.patientId, {}) %}
+            <tr>
+              <td>{{ reminder.scheduledFor|replace('T', ' ')|replace('Z', ' UTC') }}</td>
+              <td>{{ patient.get('name', 'Patient ' ~ reminder.patientId[:8]) }}</td>
+              <td><button class="text-button" type="button" data-view-appointment="{{ reminder.appointmentId }}">{{ appt.get('startsAt', 'View appointment')|replace('T', ' ')|replace('Z', ' UTC') }}</button></td>
+              <td><span class="status status-{{ reminder.status }}">{{ reminder.status }}</span>{% if reminder.skipReason %}<small class="subtle">{{ reminder.skipReason }}</small>{% endif %}</td>
+              <td>{{ reminder.attempts }}</td>
+              <td>{{ (reminder.sentAt or '—')|replace('T', ' ')|replace('Z', ' UTC') }}</td>
+              <td class="actions">
+                {% if patient.get('phone') %}
+                  <form action="{{ url_for('send_reply', appointment_id=reminder.appointmentId) }}" method="post"><input type="hidden" name="text" value="SI"><button class="button button-small" type="submit" aria-label="Send SI reply">SI</button></form>
+                  <form action="{{ url_for('send_reply', appointment_id=reminder.appointmentId) }}" method="post"><input type="hidden" name="text" value="NO"><button class="button button-small button-danger-quiet" type="submit" aria-label="Send NO reply">NO</button></form>
+                {% else %}<span class="subtle">No patient phone</span>{% endif %}
+              </td>
+            </tr>
+          {% else %}<tr><td colspan="7" class="empty">No reminders found.</td></tr>{% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel table-panel" aria-labelledby="appointments-heading">
+      <div class="panel-heading">
+        <div><p class="eyebrow">SCHEDULE</p><h2 id="appointments-heading">Appointments <span class="count">{{ appointments|length }}</span></h2></div>
+        <button class="button button-primary" type="button" data-open-appointment>Create appointment</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Starts at (UTC)</th><th>Patient</th><th>Clinic</th><th>Status</th><th>Reminders</th><th>Actions</th></tr></thead>
+          <tbody>
+          {% for item in appointments %}
+            {% set patient = patient_by_id.get(item.patientId, {}) %}
+            {% set clinic = clinic_by_id.get(item.clinicId, {}) %}
+            <tr>
+              <td>{{ item.startsAt|replace('T', ' ')|replace('Z', ' UTC') }}</td>
+              <td>{{ patient.get('name', item.patientId[:8]) }}</td>
+              <td>{{ clinic.get('name', item.clinicId[:8]) }}</td>
+              <td><span class="status status-{{ item.status }}">{{ item.status }}</span></td>
+              <td>{{ item.reminders|length }}</td>
+              <td class="actions">
+                <button class="button button-small" type="button" data-view-appointment="{{ item.id }}">View</button>
+                {% if item.status != 'cancelled' %}<button class="button button-small" type="button" data-reschedule="{{ item.id }}" data-starts-at="{{ item.startsAt }}">Reschedule</button>
+                <form action="{{ url_for('cancel_appointment', appointment_id=item.id) }}" method="post" data-confirm="Cancel this appointment? Outstanding reminders will be cancelled."><button class="button button-small button-danger-quiet" type="submit">Cancel</button></form>{% endif %}
+              </td>
+            </tr>
+          {% else %}<tr><td colspan="6" class="empty">No appointments found.</td></tr>{% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <div class="entity-grid">
+      <section class="panel table-panel" aria-labelledby="patients-heading">
+        <div class="panel-heading">
+          <div><p class="eyebrow">CONTACTS</p><h2 id="patients-heading">Patients <span class="count">{{ patients|length }}</span></h2></div>
+          <button class="button button-primary" type="button" data-new-patient>Create</button>
+        </div>
+        <div class="table-wrap">
+          <table><thead><tr><th>Name</th><th>Phone</th><th>Reminders</th><th>Clinic</th><th>Actions</th></tr></thead><tbody>
+          {% for patient in patients %}
+            {% set clinic = clinic_by_id.get(patient.clinicId, {}) %}
+            <tr><td>{{ patient.name }}</td><td>{{ patient.phone or '—' }}</td><td>{{ 'Yes' if patient.acceptsReminders else 'No' }}</td><td>{{ clinic.get('name', patient.clinicId[:8]) }}</td>
+              <td class="actions"><button class="button button-small" type="button" data-edit-patient data-id="{{ patient.id }}" data-name="{{ patient.name }}" data-phone="{{ patient.phone or '' }}" data-accepts="{{ 'true' if patient.acceptsReminders else 'false' }}">Edit</button>
+                <form action="{{ url_for('delete_patient', patient_id=patient.id) }}" method="post" data-confirm="Delete patient {{ patient.name }}? This is only possible when there are no appointments."><button class="button button-small button-danger-quiet" type="submit">Delete</button></form></td></tr>
+          {% else %}<tr><td colspan="5" class="empty">No patients found.</td></tr>{% endfor %}
+          </tbody></table>
+        </div>
+      </section>
+
+      <section class="panel table-panel" aria-labelledby="clinics-heading">
+        <div class="panel-heading">
+          <div><p class="eyebrow">LOCATIONS</p><h2 id="clinics-heading">Clinics <span class="count">{{ clinics|length }}</span></h2></div>
+          <button class="button button-primary" type="button" data-new-clinic>Create</button>
+        </div>
+        <div class="table-wrap">
+          <table><thead><tr><th>Name</th><th>Timezone</th><th>Actions</th></tr></thead><tbody>
+          {% for clinic in clinics %}
+            <tr><td>{{ clinic.name }}</td><td>{{ clinic.timezone }}</td><td class="actions"><button class="button button-small" type="button" data-edit-clinic data-id="{{ clinic.id }}" data-name="{{ clinic.name }}" data-timezone="{{ clinic.timezone }}">Edit</button>
+              <form action="{{ url_for('delete_clinic', clinic_id=clinic.id) }}" method="post" data-confirm="Delete clinic {{ clinic.name }}? It cannot be deleted while patients or appointments reference it."><button class="button button-small button-danger-quiet" type="submit">Delete</button></form></td></tr>
+          {% else %}<tr><td colspan="3" class="empty">No clinics found.</td></tr>{% endfor %}
+          </tbody></table>
+        </div>
+      </section>
+    </div>
+
+    <section class="panel provider-panel" aria-labelledby="provider-heading">
+      <div class="panel-heading">
+        <div><p class="eyebrow">MESSAGING ADAPTER</p><h2 id="provider-heading">Provider simulator</h2></div>
+        <div class="actions">
+          <form action="{{ url_for('refresh') }}" method="post"><button class="button" type="submit">Refresh provider views</button></form>
+          <button class="button button-danger" type="button" data-open-reset>Reset provider simulator</button>
+        </div>
+      </div>
+      <p class="subtle">Reset clears delivered messages, request history, and response rules. It does not delete clinics, patients, appointments, or reminders from the ClinicSay database.</p>
+      <div class="provider-grid">
+        <div><h3>Delivered messages <span class="count">{{ messages|length }}</span></h3>
+          <div class="table-wrap"><table><thead><tr><th>Delivered at</th><th>To</th><th>Text</th><th>Message ID</th></tr></thead><tbody>
+          {% for message in messages %}<tr><td>{{ message.deliveredAt|replace('T', ' ')|replace('Z', ' UTC') }}</td><td>{{ message.to }}</td><td class="message-text">{{ message.text }}</td><td class="mono">{{ message.id }}</td></tr>
+          {% else %}<tr><td colspan="4" class="empty">No delivered messages.</td></tr>{% endfor %}
+          </tbody></table></div>
+        </div>
+        <div><h3>Provider requests <span class="count">{{ provider_requests|length }}</span></h3>
+          <div class="table-wrap"><table><thead><tr><th>Received at</th><th>To</th><th>Outcome</th><th>Idempotency key</th></tr></thead><tbody>
+          {% for item in provider_requests %}<tr><td>{{ item.receivedAt|replace('T', ' ')|replace('Z', ' UTC') }}</td><td>{{ item.to or '—' }}</td><td><span class="status status-{{ 'sent' if item.status in [200, 202] else 'failed' }}">HTTP {{ item.status }}</span></td><td class="mono">{{ item.idempotencyKey or '—' }}</td></tr>
+          {% else %}<tr><td colspan="4" class="empty">No provider requests.</td></tr>{% endfor %}
+          </tbody></table></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <dialog id="clinic-dialog" class="modal">
+    <form id="clinic-form" action="{{ url_for('save_clinic') }}" method="post">
+      <div class="modal-heading"><div><p class="eyebrow">CLINIC</p><h2 id="clinic-dialog-title">Create clinic</h2></div><button class="icon-button" type="button" data-close aria-label="Close">×</button></div>
+      <input type="hidden" name="id" id="clinic-id">
+      <label>Clinic name<input name="name" id="clinic-name" required maxlength="180"></label>
+      <label>IANA timezone<input name="timezone" id="clinic-timezone" required placeholder="Europe/Madrid"></label>
+      <p class="form-hint">Use a valid IANA timezone, such as Europe/Madrid or America/Lima.</p>
+      <div class="modal-actions"><button class="button" type="button" data-close>Close</button><button class="button button-primary" type="submit">Save clinic</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="patient-dialog" class="modal">
+    <form id="patient-form" action="{{ url_for('save_patient') }}" method="post">
+      <div class="modal-heading"><div><p class="eyebrow">PATIENT</p><h2 id="patient-dialog-title">Create patient</h2></div><button class="icon-button" type="button" data-close aria-label="Close">×</button></div>
+      <input type="hidden" name="id" id="patient-id">
+      <label>Clinic<select name="clinicId" id="patient-clinic" required><option value="">Select a clinic</option>{% for clinic in clinics %}<option value="{{ clinic.id }}">{{ clinic.name }}</option>{% endfor %}</select></label>
+      <label>Patient name<input name="name" id="patient-name" required maxlength="180"></label>
+      <label>Phone (E.164)<input name="phone" id="patient-phone" placeholder="+34600111222" autocomplete="tel"></label>
+      <label>Accepts reminders<select name="acceptsReminders" id="patient-accepts"><option value="true" selected>Yes</option><option value="false">No</option></select></label>
+      <div class="modal-actions"><button class="button" type="button" data-close>Close</button><button class="button button-primary" type="submit">Save patient</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="appointment-dialog" class="modal">
+    <form id="appointment-form" action="{{ url_for('create_appointment') }}" data-create-url="{{ url_for('create_appointment') }}" method="post">
+      <div class="modal-heading"><div><p class="eyebrow">APPOINTMENT</p><h2 id="appointment-dialog-title">Create appointment</h2></div><button class="icon-button" type="button" data-close aria-label="Close">×</button></div>
+      <input type="hidden" id="appointment-id">
+      <div id="appointment-relations">
+        <label>Clinic<select name="clinicId" id="appointment-clinic" required><option value="">Select a clinic</option>{% for clinic in clinics %}<option value="{{ clinic.id }}">{{ clinic.name }}</option>{% endfor %}</select></label>
+        <label>Patient<select name="patientId" id="appointment-patient" required><option value="">Select a patient</option>{% for patient in patients %}<option value="{{ patient.id }}" data-clinic="{{ patient.clinicId }}">{{ patient.name }}{% if not patient.acceptsReminders %} (reminders off){% endif %}</option>{% endfor %}</select></label>
+      </div>
+      <label>Appointment date (UTC)<input type="date" name="date" id="appointment-date" required></label>
+      <label>Appointment time (UTC)<input type="time" name="time" id="appointment-time" step="1" required></label>
+      <p class="form-hint">Enter UTC. The value will be sent with a Z timezone suffix.</p>
+      <div class="modal-actions"><button class="button" type="button" data-close>Close</button><button class="button button-primary" type="submit">Save appointment</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="view-dialog" class="modal">
+    <div class="modal-heading"><div><p class="eyebrow">DETAILS</p><h2>Appointment</h2></div><button class="icon-button" type="button" data-close aria-label="Close">×</button></div>
+    <dl id="appointment-details" class="details-list"></dl>
+    <div class="modal-actions"><button class="button button-primary" type="button" data-close>Done</button></div>
+  </dialog>
+
+  <dialog id="reset-dialog" class="modal">
+    <form action="{{ url_for('reset_provider') }}" method="post">
+      <div class="modal-heading"><div><p class="eyebrow">PROVIDER SIMULATOR</p><h2>Reset simulator?</h2></div><button class="icon-button" type="button" data-close aria-label="Close">×</button></div>
+      <p>This clears the simulator's delivered messages, request history, and configured response rules. ClinicSay clinics, patients, appointments, and reminders will remain.</p>
+      <div class="modal-actions"><button class="button" type="button" data-close>Keep simulator</button><button class="button button-danger" type="submit">Reset simulator</button></div>
+    </form>
+  </dialog>
+</body>
+</html>

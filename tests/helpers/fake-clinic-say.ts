@@ -29,6 +29,59 @@ export class FakeClinicSayRepository implements ClinicSayRepository {
     return operation(this.transactionView());
   }
 
+  async listClinics(): Promise<Clinic[]> {
+    return [...this.clinics.values()].sort((a, b) =>
+      a.name.localeCompare(b.name) || a.id.localeCompare(b.id),
+    );
+  }
+
+  async getClinic(id: string): Promise<Clinic | null> {
+    return this.clinics.get(id) ?? null;
+  }
+
+  async listPatients(clinicId?: string): Promise<Patient[]> {
+    return [...this.patients.values()]
+      .filter((patient) => !clinicId || patient.clinicId === clinicId)
+      .sort((a, b) => a.name.localeCompare(b.name) || a.id.localeCompare(b.id));
+  }
+
+  async getPatient(id: string): Promise<Patient | null> {
+    return this.patients.get(id) ?? null;
+  }
+
+  async listAppointmentContexts(filters: {
+    clinicId?: string;
+    patientId?: string;
+    status?: Appointment['status'];
+  } = {}): Promise<AppointmentContext[]> {
+    return [...this.appointments.values()]
+      .filter((appointment) =>
+        (!filters.clinicId || appointment.clinicId === filters.clinicId) &&
+        (!filters.patientId || appointment.patientId === filters.patientId) &&
+        (!filters.status || appointment.status === filters.status),
+      )
+      .sort((a, b) =>
+        a.startsAt.getTime() - b.startsAt.getTime() || a.id.localeCompare(b.id),
+      )
+      .map((appointment) => this.context(appointment.id))
+      .filter((context): context is AppointmentContext => context !== null);
+  }
+
+  async listReminderContexts(filters: {
+    clinicId?: string;
+    appointmentId?: string;
+    status?: Reminder['status'];
+  } = {}): Promise<Array<{ reminder: Reminder; context: AppointmentContext }>> {
+    return (await this.listAppointmentContexts({ clinicId: filters.clinicId }))
+      .flatMap((context) => context.reminders
+        .filter((reminder) =>
+          (!filters.appointmentId || reminder.appointmentId === filters.appointmentId) &&
+          (!filters.status || reminder.status === filters.status),
+        )
+        .map((reminder) => ({ reminder, context })),
+      );
+  }
+
   async getAppointmentContext(id: string): Promise<AppointmentContext | null> {
     return this.context(id);
   }
@@ -70,6 +123,12 @@ export class FakeClinicSayRepository implements ClinicSayRepository {
       claimDueReminderIds: async () => [],
       findClinic: async (id) => this.clinics.get(id) ?? null,
       findPatient: async (id) => this.patients.get(id) ?? null,
+      hasPatientsForClinic: async (id) =>
+        [...this.patients.values()].some((patient) => patient.clinicId === id),
+      hasAppointmentsForClinic: async (id) =>
+        [...this.appointments.values()].some((appointment) => appointment.clinicId === id),
+      hasAppointmentsForPatient: async (id) =>
+        [...this.appointments.values()].some((appointment) => appointment.patientId === id),
       findAppointmentForUpdate: async (id) => this.context(id),
       findAppointmentContext: async (id) => this.context(id),
       findAppointmentContextsByPhone: async (phone) =>
@@ -87,11 +146,23 @@ export class FakeClinicSayRepository implements ClinicSayRepository {
         this.clinics.set(clinic.id, clinic);
         return clinic;
       },
+      updateClinic: async (clinic) => {
+        if (!this.clinics.has(clinic.id)) return null;
+        this.clinics.set(clinic.id, clinic);
+        return clinic;
+      },
+      deleteClinic: async (id) => this.clinics.delete(id),
       createPatient: async (input: NewPatient) => {
         const patient = { ...input };
         this.patients.set(patient.id, patient);
         return patient;
       },
+      updatePatient: async (patient) => {
+        if (!this.patients.has(patient.id)) return null;
+        this.patients.set(patient.id, patient);
+        return patient;
+      },
+      deletePatient: async (id) => this.patients.delete(id),
       createAppointment: async (input: NewAppointment) => {
         const appointment: Appointment = { ...input };
         this.appointments.set(appointment.id, appointment);
