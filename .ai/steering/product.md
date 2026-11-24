@@ -28,9 +28,11 @@ Reminder timing, quiet hours, eligibility, message text, retry delays, provider 
 
 Inbound replies target the eligible appointment with the most recently sent reminder to that phone number. If eligible reminders share the same `sent_at` time, choose the appointment associated with the reminder row created most recently, ordered by `created_at` descending and then `id` descending for a deterministic final tie-break.
 
+For local test cleanup, the implementation also exposes `DELETE /appointments/{id}` to delete one appointment and its reminders, and `DELETE /reminders` to delete all reminder records while preserving appointments. These operations are specified by FR-018 and FR-019 and documented in [`openapi.yaml`](../../openapi.yaml).
+
 ## Out of Scope
 
-The challenge does not require authentication, a front end, additional clinic or patient CRUD endpoints, pagination, or a real messaging provider. Clinic and patient HTTP resources remain creation-only as defined by `openapi.yaml`; do not add endpoints to list, retrieve, update, or delete them. Production cron scheduling and production deployment are discussion topics for the README, not deliverables in the evaluated service.
+The challenge does not require authentication, a front end, additional clinic or patient CRUD endpoints, pagination, or a real messaging provider. Clinic and patient HTTP resources remain creation-only as defined by `openapi.yaml`; do not add endpoints to list, retrieve, update, or delete them. Appointment and reminder deletion are local test-cleanup extensions, not challenge behaviors. Production cron scheduling and production deployment are discussion topics for the README, not deliverables in the evaluated service.
 
 ## Technology and Delivery Constraints
 

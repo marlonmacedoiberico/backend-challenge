@@ -23,7 +23,7 @@ Task IDs (`T-001` onward) are stable traceability identifiers. The service and u
 
 ## 2. OpenAPI implementation
 
-Implement the operations already defined in [`openapi.yaml`](../../openapi.yaml). Treat the contract as authoritative for paths, payloads, response schemas, validation, and status codes; do not add routes.
+Implement the operations defined in [`openapi.yaml`](../../openapi.yaml). Treat the contract as authoritative for paths, payloads, response schemas, validation, and status codes. Appointment and reminder cleanup endpoints are local testing extensions documented in the contract.
 
 **Requirements:** [FR-001](../steering/requirements.md#api-contract), [FR-013–FR-015](../steering/requirements.md#inbound-replies), and [FR-016–FR-017](../steering/requirements.md#backend-clock)
 
@@ -36,6 +36,9 @@ Implement the operations already defined in [`openapi.yaml`](../../openapi.yaml)
 - [ ] **T-063** Implement `POST /webhooks/inbound-messages` as a thin adapter over the inbound-reply application use case. Validate the request, apply duplicate-message handling and reply interpretation, and return `200` for every valid message, including ignored messages.
 - [ ] **T-064** Implement `PUT /test/clock` according to [FR-016 and FR-017](../steering/requirements.md#backend-clock) and the [system-time design decision](design.md#system-time-and-time-display). Map the request to the controllable backend clock and return the documented `204` response when the endpoint is enabled.
 - [ ] **T-065** Add API contract tests for every OpenAPI operation and its documented success, validation, not-found, and conflict responses. Include the clock behavior scenarios below. Verify response bodies and status codes against the schemas, and verify no undocumented routes are exposed.
+- [ ] **T-088** Implement `DELETE /appointments/{id}` as a local cleanup operation that permanently removes an appointment and all associated reminders, returning `204` or `404`.
+- [ ] **T-089** Implement `DELETE /reminders` as a local cleanup operation that removes all reminders while preserving appointments, returning `204` even when the collection is empty.
+- [ ] **T-090** Add unit coverage proving appointment deletion removes associated pending and sent reminders, missing appointments return not found, and collection cleanup preserves appointment records.
 
 ## 3. SchedulerService
 

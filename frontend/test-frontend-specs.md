@@ -49,7 +49,7 @@ The main screen contains these areas:
    endpoint. Include an action column for sending simulated `SI` and `NO`
    replies.
 4. **Appointments:** A table with appointment details and actions to view,
-   reschedule, or cancel an appointment.
+   reschedule, cancel, or permanently delete an appointment.
 5. **Patients and clinics:** Tables or lists with forms for creating and
    editing records. The patient form includes an **Accepts reminders**
    dropdown with `true` selected by default.
@@ -72,17 +72,17 @@ for this frontend:
 | --- | --- | --- |
 | Clinics | `GET /clinics`, `POST /clinics`, `GET /clinics/{id}`, `PATCH /clinics/{id}`, `DELETE /clinics/{id}` | List, view, create, edit, and delete clinics. Deletion fails while patients or appointments reference the clinic; changing its timezone fails while appointments exist. |
 | Patients | `GET /patients` (optional `clinicId` filter), `POST /patients`, `GET /patients/{id}`, `PATCH /patients/{id}`, `DELETE /patients/{id}` | List, view, create, edit, and delete patients. Deletion fails while appointments reference the patient. |
-| Appointments | `GET /appointments` (optional `clinicId`, `patientId`, and `status` filters), `POST /appointments`, `GET /appointments/{id}`, `PATCH /appointments/{id}`, `POST /appointments/{id}/cancel` | List, view, create, reschedule, and cancel. Cancellation is the destructive action; appointments are not hard-deleted. |
-| Reminders | `GET /reminders` (optional `clinicId`, `appointmentId`, and `status` filters); also returned as part of an appointment; process due reminders with `POST /jobs/reminders/run` | Refresh the reminders table from the collection endpoint. The job processes all reminders due at the backend clock time. |
+| Appointments | `GET /appointments` (optional `clinicId`, `patientId`, and `status` filters), `POST /appointments`, `GET /appointments/{id}`, `PATCH /appointments/{id}`, `POST /appointments/{id}/cancel`, `DELETE /appointments/{id}` | List, view, create, reschedule, cancel, or permanently delete. Deleting an appointment also deletes its reminders, including sent history; its clinic and patient remain. |
+| Reminders | `GET /reminders` (optional `clinicId`, `appointmentId`, and `status` filters), `DELETE /reminders`; also returned as part of an appointment; process due reminders with `POST /jobs/reminders/run` | Refresh the reminders table from the collection endpoint. **Empty reminders** permanently removes all reminder records, including sent history, while preserving appointments. The job processes reminders due at backend clock time. |
 | Inbound replies | Submit to `POST /webhooks/inbound-messages` | Simulated reply actions must send a unique `messageId`, the patient's phone as `from`, `SI` or `NO` as `text`, and a timezone-aware `receivedAt`. |
 | Test clock | Set with `PUT /test/clock` when `CLOCK_MODE=test` | The clock value represents backend time and must be labeled UTC. This endpoint is unavailable outside test mode. |
 | Provider simulator | Read `GET /admin/messages` and `GET /admin/requests`; reset with `POST /admin/reset` | These backend routes proxy to the configured provider simulator. Show delivered messages separately from all provider requests and their outcomes. Require confirmation before reset. |
 
 **Refresh All** reloads clinics, patients, appointments, reminders, and both
 provider views. Refresh dependent views after successful creates, edits,
-reschedules, cancellations, replies, reminder runs, and deletes where
-applicable. Handle constraint conflicts returned by clinic or patient deletes
-as action errors.
+reschedules, cancellations, replies, reminder runs, appointment deletion, and
+reminder cleanup. Handle constraint conflicts returned by clinic or patient
+deletes as action errors.
 
 The clock endpoint has no read operation. After the frontend sets the clock,
 it may display the value it last submitted. On initial load, it must show the
@@ -99,6 +99,10 @@ The provider simulator section must provide:
   rules; it does not delete clinics, patients, appointments, or reminders from
   the ClinicSay database.
 - A way to refresh both provider views after running the reminder job.
+- An **Empty reminders** action in the reminders section backed by
+  `DELETE /reminders`. Require confirmation and explain that all reminder
+  records, including sent history, are permanently deleted while appointments
+  remain.
 
 ## 6. Time handling
 
@@ -116,8 +120,8 @@ not submit a timezone-naive value.
   action.
 - Show loading and completion feedback for API calls.
 - Prevent repeated submissions while a request is in progress.
-- After a successful create, reschedule, cancellation, reply, or reminder run,
-  refresh the affected view when the API allows it.
+- After a successful create, reschedule, cancellation, reply, reminder run,
+  appointment deletion, or reminder cleanup, refresh the affected view.
 - Refresh all affected collections after successful mutations.
 
 ## 8. Local setup documentation
@@ -137,6 +141,8 @@ the API does not currently provide authentication.
   action.
 - Appointment date and time inputs use UTC, and requests carry timezone-aware
   ISO 8601 values.
-- There is no database-reset endpoint. Cancel appointments, then remove
-  patients and clinics when reference constraints allow it. Resetting the
-  provider simulator clears only provider-side messages, requests, and rules.
+- There is no full database-reset endpoint. `DELETE /appointments/{id}` removes
+  an appointment and its reminders; `DELETE /reminders` clears all reminder
+  records while keeping appointments. Remove patients and clinics after their
+  appointment references are cleared. Resetting the provider simulator clears
+  only provider-side messages, requests, and rules.

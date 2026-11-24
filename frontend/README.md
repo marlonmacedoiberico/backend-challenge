@@ -35,6 +35,6 @@ Open <http://127.0.0.1:5000>. The API base URL defaults to `http://localhost:300
 2. Create a patient for that clinic. A valid E.164 phone number is needed for reminder delivery and simulated replies. **Accepts reminders** defaults to Yes.
 3. Create an appointment with a future UTC date and time. The UI submits a timezone-aware ISO 8601 timestamp ending in `Z`.
 4. Set the backend test clock to a UTC time at or after the reminder's scheduled time, then choose **Run due reminders**.
-5. Refresh to inspect reminder state, delivered messages, and provider request outcomes. Use **SI** or **NO** to submit a simulated inbound reply.
+5. Refresh to inspect reminder state, delivered messages, and provider request outcomes. Use **SI** or **NO** to submit a simulated inbound reply. The confirmed **Delete** action removes an appointment and its reminders; **Empty reminders** clears reminder records across all appointments.
 
 The clock control requires the backend to run with `CLOCK_MODE=test`. The clock is unknown on initial load because the API does not expose a read operation. Resetting the provider simulator clears only its messages, request history, and response rules; it does not remove ClinicSay records. To remove clinics or patients, first clear appointments as needed to satisfy their reference constraints.

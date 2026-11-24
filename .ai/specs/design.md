@@ -6,7 +6,7 @@ The backend must follow Clean Architecture. Keep domain and application logic in
 
 ## API Scope
 
-The evaluated API follows [`openapi.yaml`](../../openapi.yaml). Clinic and patient resources support creation only. Do not add endpoints to list, retrieve, update, or delete clinics or patients, or otherwise expand the API beyond the challenge contract.
+The evaluated API follows [`openapi.yaml`](../../openapi.yaml). Clinic and patient resources support creation only. Do not add endpoints to list, retrieve, update, or delete clinics or patients. The documented `DELETE /appointments/{id}` and `DELETE /reminders` operations are local test-cleanup extensions: deleting an appointment deletes all its reminders, while deleting reminders leaves appointments intact.
 
 ## System Time and Time Display
 

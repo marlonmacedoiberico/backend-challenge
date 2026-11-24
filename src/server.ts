@@ -330,6 +330,13 @@ async function handle(
     return json(response, 200, appointments.map(serializeAppointment));
   }
 
+  if (method === 'DELETE' && path === '/reminders') {
+    await app.clearReminders();
+    response.writeHead(204);
+    response.end();
+    return;
+  }
+
   if (method === 'GET' && path === '/reminders') {
     const clinicFilter = url.searchParams.get('clinicId') ?? undefined;
     const appointmentFilter = url.searchParams.get('appointmentId') ?? undefined;
@@ -372,6 +379,12 @@ async function handle(
       requiredDate(body, 'startsAt'),
     );
     return json(response, 200, serializeAppointment(context));
+  }
+  if (appointmentId && method === 'DELETE') {
+    await app.deleteAppointment(appointmentId);
+    response.writeHead(204);
+    response.end();
+    return;
   }
 
   const cancelId = routeId(path, /^\/appointments\/([^/]+)\/cancel$/);

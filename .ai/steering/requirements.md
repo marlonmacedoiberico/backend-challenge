@@ -27,6 +27,11 @@ The first implementation increment covers reminder functionality, including inbo
 - **FR-011 — Due-reminder processing:** When `POST /jobs/reminders/run` is invoked, the system shall process all reminders due according to the backend clock and respond after the run completes. Concurrent runs shall not cause a reminder to be delivered more than once or cause duplicate provider calls for the same attempt.
 - **FR-012 — Provider outcomes and retries:** The system shall mark reminders `sent` for provider responses `202` and `200`; retry `503`, `504`, network errors, and responses taking longer than five seconds; and mark `422` as `failed` without retrying. Retries shall reuse the same idempotency key. The second attempt shall be scheduled one minute after the first failure and the third five minutes after the second failure. After a third unsuccessful attempt, the reminder shall be `failed`. Retries shall not be deferred by quiet hours.
 
+## Test data cleanup
+
+- **FR-018 — Appointment deletion:** `DELETE /appointments/{id}` shall permanently delete the appointment and all reminders associated with it, including sent reminder history, while retaining the clinic and patient. It shall return `204` when deleted and `404` when the appointment does not exist.
+- **FR-019 — Reminder cleanup:** `DELETE /reminders` shall permanently delete every reminder, including sent reminder history, while retaining all appointments, clinics, and patients. It shall return `204`, including when there are no reminders.
+
 ## Inbound replies
 
 - **FR-013 — Reply interpretation:** When an inbound message contains `SI` or `NO`, the system shall normalize case, accents, surrounding whitespace, and punctuation. `SI` shall confirm the applicable appointment; `NO` shall cancel it and its outstanding reminder. Other message text shall be ignored.

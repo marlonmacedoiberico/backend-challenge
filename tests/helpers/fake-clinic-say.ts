@@ -168,6 +168,13 @@ export class FakeClinicSayRepository implements ClinicSayRepository {
         this.appointments.set(appointment.id, appointment);
         return appointment;
       },
+      deleteAppointment: async (id) => {
+        if (!this.appointments.delete(id)) return false;
+        for (const reminder of this.reminders.values()) {
+          if (reminder.appointmentId === id) this.reminders.delete(reminder.id);
+        }
+        return true;
+      },
       updateAppointment: async (appointment) => {
         this.appointments.set(appointment.id, appointment);
       },
@@ -175,6 +182,9 @@ export class FakeClinicSayRepository implements ClinicSayRepository {
         const reminder: Reminder = { ...input };
         this.reminders.set(reminder.id, reminder);
         return reminder;
+      },
+      deleteAllReminders: async () => {
+        this.reminders.clear();
       },
       updateReminder: async (reminder) => {
         this.reminders.set(reminder.id, reminder);

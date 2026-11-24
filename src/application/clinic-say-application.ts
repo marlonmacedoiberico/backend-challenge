@@ -280,6 +280,23 @@ export class ClinicSayApplication {
     return context;
   }
 
+  async deleteAppointment(id: string): Promise<void> {
+    await this.repository.transaction(async (transaction) => {
+      if (!await transaction.findAppointmentForUpdate(id)) {
+        notFound('appointment not found');
+      }
+      if (!await transaction.deleteAppointment(id)) {
+        notFound('appointment not found');
+      }
+    });
+  }
+
+  async clearReminders(): Promise<void> {
+    await this.repository.transaction((transaction) =>
+      transaction.deleteAllReminders(),
+    );
+  }
+
   async receiveInboundMessage(message: InboundMessage): Promise<void> {
     await this.inboundReplyUseCase.process(message);
   }

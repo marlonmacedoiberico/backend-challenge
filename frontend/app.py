@@ -105,6 +105,16 @@ def run_reminders():
     return redirect(url_for('index'))
 
 
+@app.post('/reminders/clear')
+def clear_reminders():
+    try:
+        api().delete('/reminders')
+        flash('All reminders and their history were deleted. Appointments remain.', 'success')
+    except APIError as error:
+        flash(f'Reminders could not be deleted: {error}', 'error')
+    return redirect(url_for('index'))
+
+
 @app.post('/clinic')
 def save_clinic():
     clinic_id = request.form.get('id', '').strip()
@@ -199,6 +209,16 @@ def cancel_appointment(appointment_id):
         flash('Appointment cancelled.', 'success')
     except APIError as error:
         flash(f'Appointment could not be cancelled: {error}', 'error')
+    return redirect(url_for('index'))
+
+
+@app.post('/appointment/<appointment_id>/delete')
+def delete_appointment(appointment_id):
+    try:
+        api().delete(f'/appointments/{appointment_id}')
+        flash('Appointment and its reminder history deleted.', 'success')
+    except APIError as error:
+        flash(f'Appointment could not be deleted: {error}', 'error')
     return redirect(url_for('index'))
 
 

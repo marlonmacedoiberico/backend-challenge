@@ -313,6 +313,18 @@ class PostgresTransaction implements DataTransaction {
     );
   }
 
+  async deleteAppointment(id: string): Promise<boolean> {
+    await this.client.query(
+      'DELETE FROM reminders WHERE appointment_id = $1',
+      [id],
+    );
+    const result = await this.client.query(
+      'DELETE FROM appointments WHERE id = $1',
+      [id],
+    );
+    return result.rowCount === 1;
+  }
+
   async createReminder(reminder: NewReminder): Promise<Reminder> {
     const result = await this.client.query<Row>(
       `INSERT INTO reminders (
@@ -333,6 +345,10 @@ class PostgresTransaction implements DataTransaction {
       ],
     );
     return reminderFrom(result.rows[0]!);
+  }
+
+  async deleteAllReminders(): Promise<void> {
+    await this.client.query('DELETE FROM reminders');
   }
 
   async updateReminder(reminder: Reminder): Promise<void> {

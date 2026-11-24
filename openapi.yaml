@@ -100,6 +100,13 @@ paths:
         '404': { description: No existe }
         '409': { description: La cita está cancelada o ya empezó }
 
+    delete:
+      summary: Eliminar una cita y sus recordatorios para limpieza de pruebas
+      description: Elimina definitivamente la cita y todos sus recordatorios asociados, incluido el historial de envíos. La clínica y el paciente permanecen.
+      responses:
+        '204': { description: Cita y recordatorios eliminados }
+        '404': { description: No existe }
+
   /appointments/{id}/cancel:
     parameters:
       - { name: id, in: path, required: true, schema: { type: string } }
@@ -108,6 +115,21 @@ paths:
       responses:
         '200': { description: Cancelada, content: { application/json: { schema: { $ref: '#/components/schemas/Appointment' } } } }
         '404': { description: No existe }
+
+  /reminders:
+    get:
+      summary: Listar recordatorios (extensión local)
+      parameters:
+        - { name: clinicId, in: query, schema: { type: string } }
+        - { name: appointmentId, in: query, schema: { type: string } }
+        - { name: status, in: query, schema: { type: string } }
+      responses:
+        '200': { description: Lista de recordatorios }
+    delete:
+      summary: Eliminar todos los recordatorios para limpieza de pruebas
+      description: Elimina todos los recordatorios, incluido el historial de envíos. Las citas, clínicas y pacientes permanecen.
+      responses:
+        '204': { description: Recordatorios eliminados }
 
   /jobs/reminders/run:
     post:

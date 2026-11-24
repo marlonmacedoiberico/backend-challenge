@@ -88,8 +88,10 @@ export interface DataTransaction {
   updatePatient(patient: Patient): Promise<Patient | null>;
   deletePatient(id: string): Promise<boolean>;
   createAppointment(appointment: NewAppointment): Promise<Appointment>;
+  deleteAppointment(id: string): Promise<boolean>;
   updateAppointment(appointment: Appointment): Promise<void>;
   createReminder(reminder: NewReminder): Promise<Reminder>;
+  deleteAllReminders(): Promise<void>;
   updateReminder(reminder: Reminder): Promise<void>;
   cancelOutstandingReminders(appointmentId: string): Promise<void>;
   recordInboundMessageIfNew(

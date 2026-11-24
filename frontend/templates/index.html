@@ -54,7 +54,10 @@
     <section class="panel table-panel" aria-labelledby="reminder-heading">
       <div class="panel-heading">
         <div><p class="eyebrow">DELIVERY QUEUE</p><h2 id="reminder-heading">Reminders <span class="count">{{ reminders|length }}</span></h2></div>
-        <span class="subtle">Replies are submitted as simulated inbound messages.</span>
+        <div class="actions">
+          <span class="subtle">Replies are submitted as simulated inbound messages.</span>
+          <form action="{{ url_for('clear_reminders') }}" method="post" data-confirm="Permanently delete all reminders and sent reminder history? Appointments will remain."><button class="button button-small button-danger-quiet" type="submit">Empty reminders</button></form>
+        </div>
       </div>
       <div class="table-wrap">
         <table>
@@ -105,6 +108,7 @@
                 <button class="button button-small" type="button" data-view-appointment="{{ item.id }}">View</button>
                 {% if item.status != 'cancelled' %}<button class="button button-small" type="button" data-reschedule="{{ item.id }}" data-starts-at="{{ item.startsAt }}">Reschedule</button>
                 <form action="{{ url_for('cancel_appointment', appointment_id=item.id) }}" method="post" data-confirm="Cancel this appointment? Outstanding reminders will be cancelled."><button class="button button-small button-danger-quiet" type="submit">Cancel</button></form>{% endif %}
+                <form action="{{ url_for('delete_appointment', appointment_id=item.id) }}" method="post" data-confirm="Permanently delete this appointment and all its reminders, including sent reminder history?"><button class="button button-small button-danger-quiet" type="submit">Delete</button></form>
               </td>
             </tr>
           {% else %}<tr><td colspan="6" class="empty">No appointments found.</td></tr>{% endfor %}
