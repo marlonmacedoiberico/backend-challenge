@@ -12,6 +12,12 @@ Requires Docker Desktop with Docker Compose. Build and start the API, PostgreSQL
 docker compose up --build
 ```
 
+Windows Command Prompt (`cmd.exe`):
+
+```cmd
+docker compose up --build
+```
+
 The API listens on `http://localhost:3000`, the provider simulator on `http://localhost:4010`, and PostgreSQL on `localhost:5433`. The API runs database migrations before listening. Check readiness with `GET http://localhost:3000/health`.
 
 The local Compose configuration uses `CLOCK_MODE=test`, so backend time can be set with `PUT /test/clock`. When `CLOCK_MODE=test` is absent, the backend uses the system clock in UTC and the test-clock endpoint is unavailable. This setting concerns backend behavior; device-local time display is outside the scope of this API.
@@ -25,6 +31,12 @@ The local Compose configuration uses `CLOCK_MODE=test`, so backend time can be s
 
 Stop the stack with `docker compose down`. PostgreSQL data remains in its volume.
 
+In Command Prompt, stop the stack with:
+
+```cmd
+docker compose down
+```
+
 ## Tests and coverage
 
 Requires Node.js 22 or later and npm. Install dependencies and run the unit tests:
@@ -34,11 +46,24 @@ npm install
 npm test
 ```
 
+Windows Command Prompt (`cmd.exe`):
+
+```cmd
+npm install
+npm test
+```
+
 The tests use Node's built-in `node:test` runner and cover `SchedulerService`, `DeliveryService` (including retry behavior), `ReschedulerService`, `CancellationService`, and inbound-reply processing.
 
 Generate the same test run with coverage reports:
 
 ```sh
+npm run test:coverage
+```
+
+Windows Command Prompt (`cmd.exe`):
+
+```cmd
 npm run test:coverage
 ```
 
