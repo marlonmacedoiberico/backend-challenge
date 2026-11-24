@@ -11,6 +11,7 @@ import type {
   SkipReason,
 } from '../../domain/model.js';
 import type {
+  AppointmentFilters,
   ClaimedReminder,
   ClinicSayRepository,
   DataTransaction,
@@ -18,6 +19,7 @@ import type {
   NewClinic,
   NewPatient,
   NewReminder,
+  ReminderFilters,
 } from '../../application/ports.js';
 
 type Row = QueryResultRow & Record<string, unknown>;
@@ -110,6 +112,30 @@ class PostgresTransaction implements DataTransaction {
     return result.rows[0] ? patientFrom(result.rows[0]) : null;
   }
 
+  async hasPatientsForClinic(id: string): Promise<boolean> {
+    const result = await this.client.query<Row>(
+      'SELECT EXISTS (SELECT 1 FROM patients WHERE clinic_id = $1) AS found',
+      [id],
+    );
+    return Boolean(result.rows[0]?.found);
+  }
+
+  async hasAppointmentsForClinic(id: string): Promise<boolean> {
+    const result = await this.client.query<Row>(
+      'SELECT EXISTS (SELECT 1 FROM appointments WHERE clinic_id = $1) AS found',
+      [id],
+    );
+    return Boolean(result.rows[0]?.found);
+  }
+
+  async hasAppointmentsForPatient(id: string): Promise<boolean> {
+    const result = await this.client.query<Row>(
+      'SELECT EXISTS (SELECT 1 FROM appointments WHERE patient_id = $1) AS found',
+      [id],
+    );
+    return Boolean(result.rows[0]?.found);
+  }
+
   async findAppointmentForUpdate(
     id: string,
   ): Promise<AppointmentContext | null> {
@@ -193,6 +219,23 @@ class PostgresTransaction implements DataTransaction {
     return clinicFrom(result.rows[0]!);
   }
 
+  async updateClinic(clinic: Clinic): Promise<Clinic | null> {
+    const result = await this.client.query<Row>(
+      `UPDATE clinics SET name = $2, timezone = $3
+       WHERE id = $1 RETURNING *`,
+      [clinic.id, clinic.name, clinic.timezone],
+    );
+    return result.rows[0] ? clinicFrom(result.rows[0]) : null;
+  }
+
+  async deleteClinic(id: string): Promise<boolean> {
+    const result = await this.client.query(
+      'DELETE FROM clinics WHERE id = $1',
+      [id],
+    );
+    return result.rowCount === 1;
+  }
+
   async createPatient(patient: NewPatient): Promise<Patient> {
     const result = await this.client.query<Row>(
       `INSERT INTO patients (
@@ -209,6 +252,29 @@ class PostgresTransaction implements DataTransaction {
       ],
     );
     return patientFrom(result.rows[0]!);
+  }
+
+  async updatePatient(patient: Patient): Promise<Patient | null> {
+    const result = await this.client.query<Row>(
+      `UPDATE patients
+       SET name = $2, phone = $3, accepts_reminders = $4
+       WHERE id = $1 RETURNING *`,
+      [
+        patient.id,
+        patient.name,
+        patient.phone,
+        patient.acceptsReminders,
+      ],
+    );
+    return result.rows[0] ? patientFrom(result.rows[0]) : null;
+  }
+
+  async deletePatient(id: string): Promise<boolean> {
+    const result = await this.client.query(
+      'DELETE FROM patients WHERE id = $1',
+      [id],
+    );
+    return result.rowCount === 1;
   }
 
   async createAppointment(appointment: NewAppointment): Promise<Appointment> {
@@ -320,6 +386,92 @@ class PostgresTransaction implements DataTransaction {
 
 export class PostgresClinicSayRepository implements ClinicSayRepository {
   constructor(private readonly pool: Pool) {}
+
+  async listClinics(): Promise<Clinic[]> {
+    const result = await this.pool.query<Row>(
+      'SELECT * FROM clinics ORDER BY name, id',
+    );
+    return result.rows.map(clinicFrom);
+  }
+
+  async getClinic(id: string): Promise<Clinic | null> {
+    const result = await this.pool.query<Row>(
+      'SELECT * FROM clinics WHERE id = $1',
+      [id],
+    );
+    return result.rows[0] ? clinicFrom(result.rows[0]) : null;
+  }
+
+  async listPatients(clinicId?: string): Promise<Patient[]> {
+    const result = clinicId
+      ? await this.pool.query<Row>(
+          'SELECT * FROM patients WHERE clinic_id = $1 ORDER BY name, id',
+          [clinicId],
+        )
+      : await this.pool.query<Row>(
+          'SELECT * FROM patients ORDER BY name, id',
+        );
+    return result.rows.map(patientFrom);
+  }
+
+  async getPatient(id: string): Promise<Patient | null> {
+    const result = await this.pool.query<Row>(
+      'SELECT * FROM patients WHERE id = $1',
+      [id],
+    );
+    return result.rows[0] ? patientFrom(result.rows[0]) : null;
+  }
+
+  async listAppointmentContexts(
+    filters: AppointmentFilters = {},
+  ): Promise<AppointmentContext[]> {
+    const conditions: string[] = [];
+    const values: unknown[] = [];
+    if (filters.clinicId) {
+      values.push(filters.clinicId);
+      conditions.push(`clinic_id = $${values.length}`);
+    }
+    if (filters.patientId) {
+      values.push(filters.patientId);
+      conditions.push(`patient_id = $${values.length}`);
+    }
+    if (filters.status) {
+      values.push(filters.status);
+      conditions.push(`status = $${values.length}`);
+    }
+    const where = conditions.length
+      ? `WHERE ${conditions.join(' AND ')}`
+      : '';
+    const result = await this.pool.query<Row>(
+      `SELECT id FROM appointments ${where} ORDER BY starts_at, id`,
+      values,
+    );
+    const contexts = await Promise.all(
+      result.rows.map((row) =>
+        this.getAppointmentContext(String(row.id)),
+      ),
+    );
+    return contexts.filter(
+      (context): context is AppointmentContext => context !== null,
+    );
+  }
+
+  async listReminderContexts(
+    filters: ReminderFilters = {},
+  ): Promise<Array<{ reminder: Reminder; context: AppointmentContext }>> {
+    const contexts = await this.listAppointmentContexts({
+      clinicId: filters.clinicId,
+    });
+    return contexts.flatMap((context) =>
+      context.reminders
+        .filter((reminder) =>
+          (!filters.appointmentId ||
+            reminder.appointmentId === filters.appointmentId) &&
+          (!filters.status || reminder.status === filters.status),
+        )
+        .map((reminder) => ({ reminder, context })),
+    );
+  }
 
   async transaction<T>(
     operation: (transaction: DataTransaction) => Promise<T>,

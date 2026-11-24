@@ -1,13 +1,27 @@
 import type {
   Appointment,
   AppointmentContext,
+  AppointmentStatus,
   Clinic,
   InboundMessage,
   OutboundMessage,
   Patient,
   ProviderResult,
   Reminder,
+  ReminderStatus,
 } from '../domain/model.js';
+
+export interface AppointmentFilters {
+  clinicId?: string;
+  patientId?: string;
+  status?: AppointmentStatus;
+}
+
+export interface ReminderFilters {
+  clinicId?: string;
+  appointmentId?: string;
+  status?: ReminderStatus;
+}
 
 export interface Clock {
   now(): Date;
@@ -61,11 +75,18 @@ export interface DataTransaction {
   claimDueReminderIds(now: Date): Promise<string[]>;
   findClinic(id: string): Promise<Clinic | null>;
   findPatient(id: string): Promise<Patient | null>;
+  hasPatientsForClinic(id: string): Promise<boolean>;
+  hasAppointmentsForClinic(id: string): Promise<boolean>;
+  hasAppointmentsForPatient(id: string): Promise<boolean>;
   findAppointmentForUpdate(id: string): Promise<AppointmentContext | null>;
   findAppointmentContext(id: string): Promise<AppointmentContext | null>;
   findAppointmentContextsByPhone(phone: string): Promise<AppointmentContext[]>;
   createClinic(clinic: NewClinic): Promise<Clinic>;
+  updateClinic(clinic: Clinic): Promise<Clinic | null>;
+  deleteClinic(id: string): Promise<boolean>;
   createPatient(patient: NewPatient): Promise<Patient>;
+  updatePatient(patient: Patient): Promise<Patient | null>;
+  deletePatient(id: string): Promise<boolean>;
   createAppointment(appointment: NewAppointment): Promise<Appointment>;
   updateAppointment(appointment: Appointment): Promise<void>;
   createReminder(reminder: NewReminder): Promise<Reminder>;
@@ -81,6 +102,16 @@ export interface ClinicSayRepository {
   transaction<T>(
     operation: (transaction: DataTransaction) => Promise<T>,
   ): Promise<T>;
+  listClinics(): Promise<Clinic[]>;
+  getClinic(id: string): Promise<Clinic | null>;
+  listPatients(clinicId?: string): Promise<Patient[]>;
+  getPatient(id: string): Promise<Patient | null>;
+  listAppointmentContexts(
+    filters?: AppointmentFilters,
+  ): Promise<AppointmentContext[]>;
+  listReminderContexts(
+    filters?: ReminderFilters,
+  ): Promise<Array<{ reminder: Reminder; context: AppointmentContext }>>;
   getAppointmentContext(id: string): Promise<AppointmentContext | null>;
   claimDueReminders(now: Date): Promise<ClaimedReminder[]>;
 }

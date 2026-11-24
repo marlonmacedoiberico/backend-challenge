@@ -35,6 +35,8 @@ const repository = new PostgresClinicSayRepository(pool);
 const provider = new HttpMessageProvider(
   process.env.PROVIDER_URL ?? 'http://localhost:4010',
 );
+const providerBaseUrl = (process.env.PROVIDER_URL ?? 'http://localhost:4010')
+  .replace(/\/$/, '');
 const delivery = new DeliveryService(repository, clock, provider);
 const scheduler = new SchedulerService(repository, clock, delivery);
 const app = new ClinicSayApplication(repository, clock, scheduler);
@@ -178,6 +180,47 @@ async function handle(
     });
   }
 
+  if (method === 'GET' && path === '/clinics') {
+    const clinics = await app.listClinics();
+    return json(response, 200, clinics.map(({ id, name, timezone }) => ({
+      id, name, timezone,
+    })));
+  }
+
+  const clinicId = routeId(path, /^\/clinics\/([^/]+)$/);
+  if (clinicId && !uuidPattern.test(clinicId)) {
+    return json(response, 404, { error: 'not found' });
+  }
+  if (clinicId && method === 'GET') {
+    const clinic = await app.getClinic(clinicId);
+    return json(response, 200, {
+      id: clinic.id, name: clinic.name, timezone: clinic.timezone,
+    });
+  }
+  if (clinicId && method === 'PATCH') {
+    const body = objectBody(await readJson(request));
+    if (body.name !== undefined && typeof body.name !== 'string') {
+      throw new ApplicationError('validation', 'name must be a string');
+    }
+    if (body.timezone !== undefined && typeof body.timezone !== 'string') {
+      throw new ApplicationError('validation', 'timezone must be a string');
+    }
+    const clinic = await app.updateClinic(clinicId, {
+      ...(body.name === undefined ? {} : { name: body.name as string }),
+      ...(body.timezone === undefined
+        ? {} : { timezone: body.timezone as string }),
+    });
+    return json(response, 200, {
+      id: clinic.id, name: clinic.name, timezone: clinic.timezone,
+    });
+  }
+  if (clinicId && method === 'DELETE') {
+    await app.deleteClinic(clinicId);
+    response.writeHead(204);
+    response.end();
+    return;
+  }
+
   if (method === 'POST' && path === '/patients') {
     const body = objectBody(await readJson(request));
     if (typeof body.acceptsReminders !== 'boolean') {
@@ -201,6 +244,65 @@ async function handle(
     });
   }
 
+  if (method === 'GET' && path === '/patients') {
+    const clinicFilter = url.searchParams.get('clinicId') ?? undefined;
+    if (clinicFilter && !uuidPattern.test(clinicFilter)) {
+      throw new ApplicationError('validation', 'clinicId must be a UUID');
+    }
+    const patients = await app.listPatients(clinicFilter);
+    return json(response, 200, patients.map((patient) => ({
+      id: patient.id,
+      clinicId: patient.clinicId,
+      name: patient.name,
+      phone: patient.phone,
+      acceptsReminders: patient.acceptsReminders,
+    })));
+  }
+
+  const patientId = routeId(path, /^\/patients\/([^/]+)$/);
+  if (patientId && !uuidPattern.test(patientId)) {
+    return json(response, 404, { error: 'not found' });
+  }
+  if (patientId && method === 'GET') {
+    const patient = await app.getPatient(patientId);
+    return json(response, 200, {
+      id: patient.id, clinicId: patient.clinicId, name: patient.name,
+      phone: patient.phone, acceptsReminders: patient.acceptsReminders,
+    });
+  }
+  if (patientId && method === 'PATCH') {
+    const body = objectBody(await readJson(request));
+    if (body.name !== undefined && typeof body.name !== 'string') {
+      throw new ApplicationError('validation', 'name must be a string');
+    }
+    if (body.phone !== undefined && body.phone !== null &&
+        typeof body.phone !== 'string') {
+      throw new ApplicationError('validation', 'phone must be a string or null');
+    }
+    if (body.acceptsReminders !== undefined &&
+        typeof body.acceptsReminders !== 'boolean') {
+      throw new ApplicationError(
+        'validation', 'acceptsReminders must be a boolean',
+      );
+    }
+    const patient = await app.updatePatient(patientId, {
+      ...(body.name === undefined ? {} : { name: body.name as string }),
+      ...(body.phone === undefined ? {} : { phone: body.phone as string | null }),
+      ...(body.acceptsReminders === undefined
+        ? {} : { acceptsReminders: body.acceptsReminders as boolean }),
+    });
+    return json(response, 200, {
+      id: patient.id, clinicId: patient.clinicId, name: patient.name,
+      phone: patient.phone, acceptsReminders: patient.acceptsReminders,
+    });
+  }
+  if (patientId && method === 'DELETE') {
+    await app.deletePatient(patientId);
+    response.writeHead(204);
+    response.end();
+    return;
+  }
+
   if (method === 'POST' && path === '/appointments') {
     const body = objectBody(await readJson(request));
     const context = await app.createAppointment({
@@ -209,6 +311,50 @@ async function handle(
       startsAt: requiredDate(body, 'startsAt'),
     });
     return json(response, 201, serializeAppointment(context));
+  }
+
+  if (method === 'GET' && path === '/appointments') {
+    const clinicFilter = url.searchParams.get('clinicId') ?? undefined;
+    const patientFilter = url.searchParams.get('patientId') ?? undefined;
+    if (clinicFilter && !uuidPattern.test(clinicFilter)) {
+      throw new ApplicationError('validation', 'clinicId must be a UUID');
+    }
+    if (patientFilter && !uuidPattern.test(patientFilter)) {
+      throw new ApplicationError('validation', 'patientId must be a UUID');
+    }
+    const appointments = await app.listAppointmentContexts({
+      clinicId: clinicFilter,
+      patientId: patientFilter,
+      status: url.searchParams.get('status') ?? undefined,
+    });
+    return json(response, 200, appointments.map(serializeAppointment));
+  }
+
+  if (method === 'GET' && path === '/reminders') {
+    const clinicFilter = url.searchParams.get('clinicId') ?? undefined;
+    const appointmentFilter = url.searchParams.get('appointmentId') ?? undefined;
+    if (clinicFilter && !uuidPattern.test(clinicFilter)) {
+      throw new ApplicationError('validation', 'clinicId must be a UUID');
+    }
+    if (appointmentFilter && !uuidPattern.test(appointmentFilter)) {
+      throw new ApplicationError('validation', 'appointmentId must be a UUID');
+    }
+    const reminders = await app.listReminderContexts({
+      clinicId: clinicFilter,
+      appointmentId: appointmentFilter,
+      status: url.searchParams.get('status') ?? undefined,
+    });
+    return json(response, 200, reminders.map(({ reminder, context }) => ({
+      id: reminder.id,
+      appointmentId: reminder.appointmentId,
+      scheduledFor: reminder.scheduledFor.toISOString(),
+      status: apiReminderStatus(reminder.status),
+      attempts: reminder.attempts,
+      sentAt: reminder.sentAt?.toISOString() ?? null,
+      skipReason: reminder.skipReason,
+      clinicId: context.appointment.clinicId,
+      patientId: context.appointment.patientId,
+    })));
   }
 
   const appointmentId = routeId(path, /^\/appointments\/([^/]+)$/);
@@ -269,6 +415,39 @@ async function handle(
     testClock.set(requiredDate(body, 'now'));
     response.writeHead(204);
     response.end();
+    return;
+  }
+
+  if (path === '/admin/messages' || path === '/admin/requests') {
+    if (method !== 'GET') return json(response, 405, { error: 'method not allowed' });
+    const target = new URL(`${providerBaseUrl}${path}`);
+    for (const [key, value] of url.searchParams) target.searchParams.set(key, value);
+    let result: Response;
+    try {
+      result = await fetch(target);
+    } catch {
+      return json(response, 502, { error: 'provider simulator is unavailable' });
+    }
+    const body = await result.text();
+    response.writeHead(result.status, {
+      'content-type': result.headers.get('content-type') ?? 'application/json',
+    });
+    response.end(body);
+    return;
+  }
+  if (path === '/admin/reset') {
+    if (method !== 'POST') return json(response, 405, { error: 'method not allowed' });
+    let result: Response;
+    try {
+      result = await fetch(`${providerBaseUrl}/admin/reset`, { method: 'POST' });
+    } catch {
+      return json(response, 502, { error: 'provider simulator is unavailable' });
+    }
+    const body = await result.text();
+    response.writeHead(result.status, {
+      'content-type': result.headers.get('content-type') ?? 'application/json',
+    });
+    response.end(body);
     return;
   }
 
