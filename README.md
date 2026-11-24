@@ -1,71 +1,96 @@
-# ClinicSay Backend
+# Backend de ClinicSay
 
-Submit the challenge through the [delivery form](https://docs.google.com/forms/d/e/1FAIpQLSd6OqQxPRvpBz_Cxw8KgOhN9-fsv5idE83PYGsH861BaMITCQ/viewform) by Wednesday, November 25, 2026, at 17:30 Madrid time (11:30 Lima time).
+Entrega el reto mediante el formulario de Google Forms.
+El plazo vence el miércoles, 25 de noviembre de 2026, a las 17:30, hora de
+Madrid (11:30, hora de Lima).
 
-Backend for the ClinicSay appointment-reminder challenge. The challenge statement is available in [`enunciado.pdf`](enunciado.pdf), and [`openapi.yaml`](openapi.yaml) defines the HTTP contract. Product requirements and design decisions live under `.ai/steering/` and `.ai/specs/`.
+Este backend implementa el reto de recordatorios de citas de ClinicSay.
+El enunciado está en [`enunciado.pdf`](enunciado.pdf), y
+[`openapi.yaml`](openapi.yaml) define el contrato HTTP. Los requisitos y las
+decisiones de diseño del producto están en `.ai/steering/` y `.ai/specs/`.
 
-## Local stack
+## Servicios locales
 
-Requires Docker Desktop with Docker Compose. Build and start the API, PostgreSQL, and the supplied messaging-provider simulator:
+Se necesita Docker Desktop con Docker Compose. Para compilar e iniciar la API,
+PostgreSQL y el simulador de mensajería incluido:
 
 ```sh
 docker compose up --build
 ```
 
-Windows Command Prompt (`cmd.exe`):
+En el Símbolo del sistema de Windows (`cmd.exe`):
 
 ```cmd
 docker compose up --build
 ```
 
-The API listens on `http://localhost:3000`, the provider simulator on `http://localhost:4010`, and PostgreSQL on `localhost:5433`. The API runs database migrations before listening. Check readiness with `GET http://localhost:3000/health`.
+La API escucha en `http://localhost:3000`, el simulador del proveedor en
+`http://localhost:4010` y PostgreSQL en `localhost:5433`. La API ejecuta las
+migraciones de la base de datos antes de empezar a escuchar. Comprueba que esté
+lista con `GET http://localhost:3000/health`.
 
-The local Compose configuration uses `CLOCK_MODE=test`, so backend time can be set with `PUT /test/clock`. When `CLOCK_MODE=test` is absent, the backend uses the system clock in UTC and the test-clock endpoint is unavailable. This setting concerns backend behavior; device-local time display is outside the scope of this API.
+La configuración local de Compose usa `CLOCK_MODE=test`, por lo que puedes
+ajustar la hora del backend con `PUT /test/clock`. Si no se define
+`CLOCK_MODE=test`, el backend usa el reloj del sistema en UTC y el endpoint
+para ajustar la hora no está disponible. Este ajuste solo afecta al backend;
+la hora que muestra el dispositivo queda fuera del alcance de esta API.
 
-| Variable | Local value | Purpose |
-|---|---|---|
-| `PORT` | `3000` | HTTP port |
-| `CLOCK_MODE` | `test` | Enables the controllable backend clock |
-| `DEBUG_TIME` | `0` | Set to `1` to log time-zone probes, offsets, candidates, and exact matches |
-| `PROVIDER_URL` | `http://provider:4010` | Provider URL from the API container |
-| `DATABASE_URL` | `postgresql://clinicsay:clinicsay@db:5432/clinicsay` | PostgreSQL connection |
+Variables locales:
 
-To enable time-conversion debug output from Windows Command Prompt, set the variable before starting Compose:
+- `PORT`: `3000`; puerto HTTP.
+- `CLOCK_MODE`: `test`; habilita el reloj ajustable del backend.
+- `DEBUG_TIME`: `0`; usa `1` para mostrar las comprobaciones de zona horaria,
+  los desfases, los instantes candidatos y las coincidencias exactas.
+- `PROVIDER_URL`: `http://provider:4010`; URL del proveedor desde el contenedor
+  de la API.
+- `DATABASE_URL`: conexión de PostgreSQL:
+  `postgresql://clinicsay:clinicsay@db:5432/clinicsay`.
+
+Para activar los registros de depuración de hora desde CMD, define la variable
+antes de iniciar Compose:
 
 ```cmd
 set "DEBUG_TIME=1"
 docker compose up --build
 ```
 
-The debug messages appear in the API's container output. To follow them when the stack is running in the background, use `docker compose logs -f api`.
+Los mensajes aparecen en la salida del contenedor de la API. Si el stack está
+ejecutándose en segundo plano, puedes seguirlos con:
+`docker compose logs -f api`.
 
-Stop the stack with `docker compose down`. PostgreSQL data remains in its volume.
+Detén el stack con `docker compose down`. Los datos de PostgreSQL se conservan
+en su volumen.
 
-In Command Prompt, stop the stack with:
+En CMD, usa:
 
 ```cmd
 docker compose down
 ```
 
-## Tests and coverage
+## Pruebas y cobertura
 
-Requires Node.js 22 or later and npm. Install dependencies and run the unit tests:
+Se necesita Node.js 22 o posterior y npm. Instala las dependencias y ejecuta
+las pruebas unitarias:
 
 ```sh
 npm install
 npm test
 ```
 
-Windows Command Prompt (`cmd.exe`):
+En el Símbolo del sistema de Windows (`cmd.exe`):
 
 ```cmd
 npm install
 npm test
 ```
 
-The tests use Node's built-in `node:test` runner and cover `SchedulerService`, `DeliveryService` (including retry behavior), `ReschedulerService`, `CancellationService`, and inbound-reply processing.
+Las pruebas usan el ejecutor integrado `node:test` de Node.js y cubren
+`SchedulerService`, `DeliveryService` (incluidos los reintentos),
+`ReschedulerService`, `CancellationService` y el procesamiento de respuestas
+entrantes.
 
-To see the time-zone debug output while running only the time conversion test, use Windows Command Prompt:
+Para ver los registros de depuración de zonas horarias mientras ejecutas solo
+la prueba de conversión de hora, usa CMD:
 
 ```cmd
 set "DEBUG_TIME=1"
@@ -73,29 +98,45 @@ npm run build
 node --test dist/tests/unit/time.test.js
 ```
 
-Set `DEBUG_TIME` before starting Node because `time.ts` reads it when the module loads. The test will print the sampled probes and offsets, candidate instants, and exact matches.
+Define `DEBUG_TIME` antes de iniciar Node, porque `time.ts` lee la variable
+cuando se carga el módulo. La prueba mostrará las muestras de hora y sus
+desfases, los instantes candidatos y las coincidencias exactas.
 
-Generate the same test run with coverage reports:
+Para ejecutar las pruebas y generar los informes de cobertura:
 
 ```sh
 npm run test:coverage
 ```
 
-Windows Command Prompt (`cmd.exe`):
+En el Símbolo del sistema de Windows (`cmd.exe`):
 
 ```cmd
 npm run test:coverage
 ```
 
-The command prints a coverage summary and writes:
+El comando muestra un resumen de cobertura y genera estos archivos:
 
-- `coverage/index.html`: navigable report for file, line, branch, and function coverage.
-- `coverage/lcov.info`: LCOV data for CI and coverage-analysis tools.
+- `coverage/index.html`: informe navegable con cobertura de archivos, líneas,
+  ramas y funciones.
+- `coverage/lcov.info`: datos LCOV para CI y herramientas de análisis de
+  cobertura.
 
-Open `coverage/index.html` in a browser to inspect the report. TypeScript build output is written to `dist/`.
+Abre `coverage/index.html` en un navegador para consultar el informe. La
+compilación de TypeScript genera sus archivos en `dist/`.
 
-## Implementation notes
+Ejemplos del informe de cobertura:
 
-- The application follows Clean Architecture. Domain and application services depend on ports; PostgreSQL and HTTP provider integrations are infrastructure adapters.
-- Reminder scheduling and appointment display use the clinic's IANA time zone where applicable. API timestamps are returned as UTC instants.
-- The provider simulator in `provider/` is fixed for evaluation and must not be modified.
+![Resumen de cobertura](imgs/test-coverage.png)
+
+![Detalle del informe de cobertura](imgs/test-coverage-2.png)
+
+## Notas de implementación
+
+- La aplicación sigue Clean Architecture. El dominio y los servicios de
+  aplicación dependen de puertos; PostgreSQL y el proveedor HTTP son
+  adaptadores de infraestructura.
+- La planificación de recordatorios y la hora de las citas usan la zona IANA
+  de la clínica cuando corresponde. La API devuelve las marcas de tiempo como
+  instantes UTC.
+- El simulador del proveedor en `provider/` es fijo para la evaluación y no
+  debe modificarse.
