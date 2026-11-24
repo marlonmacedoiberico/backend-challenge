@@ -4,14 +4,13 @@
 
 ## 1. Purpose and scope
 
-The test frontend is a local development tool for exercising the ClinicSay API
-through a browser. It will use Flask to render HTML pages and call the existing
-Node.js API. The API remains the source of truth for application behavior and
-data.
-
-The frontend is not part of the evaluated backend API and must not add or
-change API operations. Keep it in the `frontend/` directory with its own
-Python dependencies and run instructions.
+The test frontend is a local development tool in `frontend/` for exercising
+the ClinicSay API through a browser. Flask renders the pages and calls the
+Node.js API, which remains the source of truth for application behavior and
+data. The frontend has its own Python dependencies and run instructions.
+Normally all necessary endpoints are already present; the local management
+and provider-simulator endpoints described below are additions to the
+challenge's original OpenAPI contract.
 
 ## 2. Technology
 
@@ -21,8 +20,8 @@ Python dependencies and run instructions.
   interactions
 - **API communication:** Flask sends HTTP requests to the API using a
   configurable base URL, defaulting to `http://localhost:3000`
-- **Provider simulator:** Flask uses a separate configurable base URL,
-  defaulting to `http://localhost:4010`
+- **Provider simulator:** Access it through the backend's `/admin/*` routes.
+  The backend uses its configured `PROVIDER_URL` to reach the simulator.
 
 Browser requests should go to Flask. Flask should call the API server-side,
 keeping API integration in one client module and avoiding browser CORS
@@ -46,14 +45,14 @@ The main screen contains these areas:
    and a button to set the backend clock.
 2. **Reminder job:** A button to run due reminders and show the returned
    `processed` count.
-3. **Reminders:** A table showing reminders for appointments known to the
-   frontend. Include an action column for sending simulated `SI` and `NO`
+3. **Reminders:** A table showing reminders returned by the reminder-list
+   endpoint. Include an action column for sending simulated `SI` and `NO`
    replies.
 4. **Appointments:** A table with appointment details and actions to view,
    reschedule, or cancel an appointment.
-5. **Patients and clinics:** Tables or lists with forms for creating records.
-   The patient form includes an **Accepts reminders** dropdown with `true`
-   selected by default.
+5. **Patients and clinics:** Tables or lists with forms for creating and
+   editing records. The patient form includes an **Accepts reminders**
+   dropdown with `true` selected by default.
 6. **Refresh All:** A button to reload all records that the API can retrieve
    and refresh the views that depend on them.
 7. **Provider simulator:** Use the dedicated section in the layout to inspect
@@ -63,27 +62,27 @@ Use a modal dialog for create and edit forms where the API supports those
 operations. Require confirmation before cancellation or any supported delete
 operation.
 
-## 5. API behavior and current limitations
+## 5. API behavior and available operations
 
-The frontend must follow [`../openapi.yaml`](../openapi.yaml). The current API
-supports these operations:
+The original challenge API contract is in [`../openapi.yaml`](../openapi.yaml).
+The backend also exposes the following local management and simulator routes
+for this frontend:
 
 | Resource | Available operations | Frontend implication |
 | --- | --- | --- |
-| Clinics | Create with `POST /clinics` | No list, read, edit, or delete operation is available. |
-| Patients | Create with `POST /patients` | No list, read, edit, or delete operation is available. |
-| Appointments | Create, read by ID, reschedule, and cancel | No list operation or hard-delete operation is available. Treat the appointment's destructive action as **Cancel**, not Delete. |
-| Reminders | Returned as part of an appointment; process due reminders with `POST /jobs/reminders/run` | There is no reminder-list endpoint. The job processes all reminders due at the backend clock time. |
+| Clinics | `GET /clinics`, `POST /clinics`, `GET /clinics/{id}`, `PATCH /clinics/{id}`, `DELETE /clinics/{id}` | List, view, create, edit, and delete clinics. Deletion fails while patients or appointments reference the clinic; changing its timezone fails while appointments exist. |
+| Patients | `GET /patients` (optional `clinicId` filter), `POST /patients`, `GET /patients/{id}`, `PATCH /patients/{id}`, `DELETE /patients/{id}` | List, view, create, edit, and delete patients. Deletion fails while appointments reference the patient. |
+| Appointments | `GET /appointments` (optional `clinicId`, `patientId`, and `status` filters), `POST /appointments`, `GET /appointments/{id}`, `PATCH /appointments/{id}`, `POST /appointments/{id}/cancel` | List, view, create, reschedule, and cancel. Cancellation is the destructive action; appointments are not hard-deleted. |
+| Reminders | `GET /reminders` (optional `clinicId`, `appointmentId`, and `status` filters); also returned as part of an appointment; process due reminders with `POST /jobs/reminders/run` | Refresh the reminders table from the collection endpoint. The job processes all reminders due at the backend clock time. |
 | Inbound replies | Submit to `POST /webhooks/inbound-messages` | Simulated reply actions must send a unique `messageId`, the patient's phone as `from`, `SI` or `NO` as `text`, and a timezone-aware `receivedAt`. |
 | Test clock | Set with `PUT /test/clock` when `CLOCK_MODE=test` | The clock value represents backend time and must be labeled UTC. This endpoint is unavailable outside test mode. |
-| Provider simulator | Read `GET /admin/messages` and `GET /admin/requests`; reset with `POST /admin/reset` | Show delivered messages separately from all provider requests and their outcomes. Require confirmation before reset. |
+| Provider simulator | Read `GET /admin/messages` and `GET /admin/requests`; reset with `POST /admin/reset` | These backend routes proxy to the configured provider simulator. Show delivered messages separately from all provider requests and their outcomes. Require confirmation before reset. |
 
-Because clinics and patients cannot be fetched, and appointments cannot be
-listed, **Refresh All cannot reload all records from the current API**. The
-frontend may refresh appointment details for IDs it already knows, but a full
-refresh requires collection read endpoints. Clinic and patient editing or
-deletion also requires API support. Do not present these actions as working
-until the API contract supports them.
+**Refresh All** reloads clinics, patients, appointments, reminders, and both
+provider views. Refresh dependent views after successful creates, edits,
+reschedules, cancellations, replies, reminder runs, and deletes where
+applicable. Handle constraint conflicts returned by clinic or patient deletes
+as action errors.
 
 The clock endpoint has no read operation. After the frontend sets the clock,
 it may display the value it last submitted. On initial load, it must show the
@@ -107,10 +106,9 @@ Label the test clock as UTC and submit an ISO 8601 timestamp with a timezone,
 for example `2027-12-14T10:00:00Z`. The seconds field defaults to `00`.
 
 Appointment creation and rescheduling also require timezone-aware timestamps.
-Before implementation, decide whether the form accepts UTC or clinic-local
-date and time. Label the chosen timezone and convert the value to an ISO 8601
-timestamp with an offset before calling the API. Do not submit a timezone-naive
-value.
+Use UTC for appointment date and time inputs and label them **UTC**. Convert
+the chosen value to an ISO 8601 timestamp with `Z` before calling the API. Do
+not submit a timezone-naive value.
 
 ## 7. Errors and feedback
 
@@ -120,7 +118,7 @@ value.
 - Prevent repeated submissions while a request is in progress.
 - After a successful create, reschedule, cancellation, reply, or reminder run,
   refresh the affected view when the API allows it.
-- Explain when a view cannot be refreshed because the API has no read endpoint.
+- Refresh all affected collections after successful mutations.
 
 ## 8. Local setup documentation
 
@@ -130,16 +128,15 @@ creating records and triggering reminders. Document that the backend must be
 running with `CLOCK_MODE=test` to use the clock control. Keep the tool local;
 the API does not currently provide authentication.
 
-## 9. Decisions needed before implementation
+## 9. Settled implementation choices
 
-1. Should this remain a test frontend for the existing API, or should the API
-   contract be expanded to support full clinic, patient, and appointment
-   management? The current backend design keeps clinics and patients
-   creation-only and does not provide collection listing.
-2. Should Refresh All cover only appointments known to the frontend, or should
-   collection endpoints be added through a separate product decision?
-3. Should the reply buttons submit simulated webhook messages, or should the
-   frontend only display replies received from the messaging provider?
-4. Should appointment date and time inputs use UTC or the clinic's timezone?
-5. How should test records be reset or cleaned up? The API has no delete
-   operations for clinics or patients and no database-reset endpoint.
+- Use the backend collection endpoints for **Refresh All** and the clinic,
+  patient, appointment, and reminder views.
+- Reply buttons submit simulated webhook messages to
+  `POST /webhooks/inbound-messages`, with a new unique `messageId` for each
+  action.
+- Appointment date and time inputs use UTC, and requests carry timezone-aware
+  ISO 8601 values.
+- There is no database-reset endpoint. Cancel appointments, then remove
+  patients and clinics when reference constraints allow it. Resetting the
+  provider simulator clears only provider-side messages, requests, and rules.
