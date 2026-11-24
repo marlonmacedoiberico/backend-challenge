@@ -1,0 +1,46 @@
+<mxfile host="Electron">
+  <diagram name="Page-1" id="NJPYPALlzILIpKMRVb72">
+    <mxGraphModel dx="1487" dy="892" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1100" pageHeight="850" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="7qzY4dfjysZc7TDAlyMK-1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="" vertex="1">
+          <mxGeometry height="110" width="720" x="170" y="80" as="geometry" />
+        </mxCell>
+        <mxCell id="7qzY4dfjysZc7TDAlyMK-2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;roundedPerimeter=1;" value="button&lt;br&gt;/test/clock" vertex="1">
+          <mxGeometry height="60" width="120" x="220" y="105" as="geometry" />
+        </mxCell>
+        <mxCell id="7qzY4dfjysZc7TDAlyMK-3" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="timestamp selector, including seconds, seconds as 00 by default" vertex="1">
+          <mxGeometry height="55" width="310" x="380" y="110" as="geometry" />
+        </mxCell>
+        <mxCell id="7qzY4dfjysZc7TDAlyMK-4" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="Clock selector" vertex="1">
+          <mxGeometry height="30" width="110" x="160" y="79" as="geometry" />
+        </mxCell>
+        <mxCell id="7qzY4dfjysZc7TDAlyMK-6" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="" vertex="1">
+          <mxGeometry height="110" width="720" x="170" y="211" as="geometry" />
+        </mxCell>
+        <mxCell id="7qzY4dfjysZc7TDAlyMK-7" parent="1" style="rounded=1;whiteSpace=wrap;html=1;roundedPerimeter=1;" value="button&lt;br&gt;&lt;span style=&quot;text-align: left;&quot;&gt;/jobs/reminders/run&lt;/span&gt;" vertex="1">
+          <mxGeometry height="60" width="120" x="220" y="236" as="geometry" />
+        </mxCell>
+        <mxCell id="7qzY4dfjysZc7TDAlyMK-9" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="Reminders" vertex="1">
+          <mxGeometry height="30" width="110" x="160" y="210" as="geometry" />
+        </mxCell>
+        <mxCell id="7qzY4dfjysZc7TDAlyMK-10" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="CRUD OF APPOINTMENTS" vertex="1">
+          <mxGeometry height="110" width="720" x="167" y="460" as="geometry" />
+        </mxCell>
+        <mxCell id="7qzY4dfjysZc7TDAlyMK-11" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="CRUD OF PATIENTS" vertex="1">
+          <mxGeometry height="80" width="720" x="167" y="580" as="geometry" />
+        </mxCell>
+        <mxCell id="7qzY4dfjysZc7TDAlyMK-12" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="CRUD OF CLINICS" vertex="1">
+          <mxGeometry height="80" width="720" x="167" y="670" as="geometry" />
+        </mxCell>
+        <mxCell id="7qzY4dfjysZc7TDAlyMK-13" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="LIST OF REMINDERS (Table of reminders)" vertex="1">
+          <mxGeometry height="110" width="720" x="170" y="340" as="geometry" />
+        </mxCell>
+        <mxCell id="7qzY4dfjysZc7TDAlyMK-14" parent="1" style="rounded=1;whiteSpace=wrap;html=1;roundedPerimeter=1;" value="Refresh All" vertex="1">
+          <mxGeometry height="30" width="120" x="770" y="20" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
