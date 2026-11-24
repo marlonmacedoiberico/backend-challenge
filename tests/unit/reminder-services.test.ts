@@ -74,6 +74,7 @@ test(
   },
 );
 
+// DST, so Madrid's local offset will be UTC+2 02:00
 test(
   'SchedulerService defers an initial send during clinic quiet hours',
   async () => {
@@ -87,7 +88,7 @@ test(
   );
   assert.equal(
     scheduled.scheduledFor.toISOString(),
-    '2027-04-02T07:00:00.000Z',
+    '2027-04-02T07:00:00.000Z',   // Friday, April 2, 2027, at 9:00 AM
   );
   },
 );
@@ -167,7 +168,7 @@ test('DeliveryService formats messages in clinic-local time', async () => {
   await delivery.deliverClaimed(claim!);
   assert.equal(
     provider.messages[0]?.text,
-    'Hola Ana, te recordamos tu cita en ClÃ­nica Sonrisa el ' +
+    'Hola Ana, te recordamos tu cita en Cl\u00ednica Sonrisa el ' +
       '28/03/2027 a las 10:00. Responde SI para confirmar o NO para cancelar.',
   );
 });
