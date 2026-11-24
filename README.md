@@ -26,8 +26,18 @@ The local Compose configuration uses `CLOCK_MODE=test`, so backend time can be s
 |---|---|---|
 | `PORT` | `3000` | HTTP port |
 | `CLOCK_MODE` | `test` | Enables the controllable backend clock |
+| `DEBUG_TIME` | `0` | Set to `1` to log time-zone probes, offsets, candidates, and exact matches |
 | `PROVIDER_URL` | `http://provider:4010` | Provider URL from the API container |
 | `DATABASE_URL` | `postgresql://clinicsay:clinicsay@db:5432/clinicsay` | PostgreSQL connection |
+
+To enable time-conversion debug output from Windows Command Prompt, set the variable before starting Compose:
+
+```cmd
+set "DEBUG_TIME=1"
+docker compose up --build
+```
+
+The debug messages appear in the API's container output. To follow them when the stack is running in the background, use `docker compose logs -f api`.
 
 Stop the stack with `docker compose down`. PostgreSQL data remains in its volume.
 
@@ -54,6 +64,16 @@ npm test
 ```
 
 The tests use Node's built-in `node:test` runner and cover `SchedulerService`, `DeliveryService` (including retry behavior), `ReschedulerService`, `CancellationService`, and inbound-reply processing.
+
+To see the time-zone debug output while running only the time conversion test, use Windows Command Prompt:
+
+```cmd
+set "DEBUG_TIME=1"
+npm run build
+node --test dist/tests/unit/time.test.js
+```
+
+Set `DEBUG_TIME` before starting Node because `time.ts` reads it when the module loads. The test will print the sampled probes and offsets, candidate instants, and exact matches.
 
 Generate the same test run with coverage reports:
 

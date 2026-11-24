@@ -8,6 +8,7 @@ export interface LocalDateTime {
 }
 
 const formatterCache = new Map<string, Intl.DateTimeFormat>();
+const debugTime = process.env.DEBUG_TIME === '1';
 
 function formatter(timezone: string): Intl.DateTimeFormat {
   let value = formatterCache.get(timezone);
@@ -71,10 +72,18 @@ function localAsUtc(value: LocalDateTime): number {
 }
 
 /**
- * Convert clinic-local wall time to an instant. For an ambiguous fall-back
- * time, choose the earlier instant. For a nonexistent spring-forward time,
- * shift forward
- * by the size of the gap, matching the common "compatible" disambiguation rule.
+ * Turn the clinic's local clock time into one exact moment in time.
+ * Daylight-saving changes can make a local time disappear or happen twice:
+ *
+ * - When Madrid's clocks jump forward on 28 March 2027, they skip from 02:00
+ *   to 03:00. A requested 02:30 never appears on the clock, so this method
+ *   moves it forward by the one-hour gap to 03:30 (01:30 UTC).
+ * - When Madrid's clocks move back on 31 October 2027, 02:30 happens twice.
+ *   This method chooses the earlier one: 02:30 while Madrid is still on UTC+2
+ *   (00:30 UTC), rather than the second 02:30 after the change (01:30 UTC).
+ *
+ * This follows the common "compatible" rule: move missing times forward and
+ * use the earlier moment when a time occurs twice.
  */
 export function localDateTimeToInstant(
   value: LocalDateTime,
@@ -85,13 +94,51 @@ export function localDateTimeToInstant(
   for (let hours = -36; hours <= 36; hours += 3) {
     const probe = new Date(target + hours * 60 * 60 * 1000);
     const wall = localDateTime(probe, timezone);
-    offsets.add(localAsUtc(wall) - probe.getTime());
+    const offset = localAsUtc(wall) - probe.getTime();
+    offsets.add(offset);
+    if (debugTime) {
+      console.debug('[time] probe', {
+        probe: probe.toISOString(),
+        wall,
+        offsetHours: offset / (60 * 60 * 1000),
+        offsetsHours: [...offsets].map((value) => value / (60 * 60 * 1000)),
+      });
+    }
   }
 
   const candidates = [...offsets].map((offset) => target - offset);
+  if (debugTime) {
+    console.debug('[time] candidates', {
+      candidates,
+      localTimes: candidates.map((candidate) => {
+        const local = formatAppointmentLocal(new Date(candidate), timezone);
+        return {
+          instant: new Date(candidate).toISOString(),
+          wall: `${local.date} ${local.time} (${timezone})`,
+        };
+      }),
+    });
+  }
+  /*
+   * `exact` is the list of candidate moments that convert back to exactly the
+   * local date and time requested.
+   *
+   * For each candidate, the code asks, “What time would the clinic’s clock
+   * show at this moment?” `sameLocal(...)` compares that answer with the
+   * requested year, month, day, hour, minute, and second.
+   *
+   * - On an ordinary day, `exact` contains the matching moment.
+   * - When the clock moves back in autumn, it can contain two matching
+   *   moments; the next line chooses the earlier one.
+   * - When the clock jumps forward over the requested time, `exact` is empty.
+   *   The method then uses the “first valid time after it” logic.
+   */
   const exact = candidates.filter((candidate) =>
     sameLocal(localDateTime(new Date(candidate), timezone), value),
   );
+  if (debugTime) {
+    console.debug('[time] exact matches', exact);
+  }
   if (exact.length) return new Date(Math.min(...exact));
 
   const after = candidates
