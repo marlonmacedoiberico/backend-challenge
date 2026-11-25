@@ -16,6 +16,7 @@ Behavioral definitions come from the [challenge statement](enunciado.md), [OpenA
 - **Reminder appointment version (`appointmentVersion`):** The appointment version for which a reminder was created. It is persistence-only and lets the system identify reminders for a superseded schedule.
 - **Reminder history:** All reminder records associated with an appointment, including sent, failed, skipped, and cancelled reminders. Rescheduling or cancelling an appointment preserves sent reminders as history. The appointment API returns records from oldest to newest.
 - **Pending reminder:** A reminder awaiting its initial send or a scheduled retry.
+- **Claiming a reminder (`claim`):** A worker takes responsibility for a due reminder and marks it as being processed (`sending`). This prevents another worker from processing the same reminder at the same time. Claiming does not mean the message has been delivered; the worker still passes it to `DeliveryService`.
 - **Sent reminder:** A reminder the provider accepted successfully. Its `sentAt` timestamp records the backend time of that outcome.
 - **Failed reminder:** A reminder that reached a permanent provider rejection or exhausted its allowed attempts.
 - **Skipped reminder:** A reminder intentionally not sent because it was too late or the patient was ineligible.
