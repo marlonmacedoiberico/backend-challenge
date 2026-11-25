@@ -241,3 +241,26 @@ despacho de mensajes. El patrón **Transactional Outbox** permitiría guardar la
 operación de negocio y la instrucción de enviar el recordatorio dentro de la
 misma transacción. Así, el envío pendiente no dependería únicamente de la
 memoria de un proceso que podría fallar.
+
+## Cómo se llevaría a producción a mayor escala
+
+Empezaría con una API desplegada en la nube, PostgreSQL administrado y un
+proveedor oficial de WhatsApp. Guardaría las credenciales en un gestor de
+secretos y configuraría copias de seguridad periódicas.
+
+Adoptaría definitivamente el patrón **Transactional Outbox** mencionado antes: la operación de negocio y la instrucción de envío quedarían registradas en la misma transacción de PostgreSQL. Después, los trabajadores procesarían los recordatorios pendientes desde ese registro persistente.
+
+Los recordatorios pendientes permanecerían registrados en PostgreSQL y varios
+trabajadores los enviarían en segundo plano. Para un volumen de 20 000
+recordatorios diarios, empezaría con pocos trabajadores y ajustaría su capacidad
+según la carga observada. Si el crecimiento lo justifica, incorporaría una cola
+externa —por ejemplo, Amazon SQS o RabbitMQ— para distribuir el trabajo y
+absorber picos de actividad.
+
+El lanzamiento sería gradual: probaría primero con pocas clínicas y aumentaría
+el volumen progresivamente, respetando los límites de envío de WhatsApp.
+
+Monitorizaría el volumen pendiente, los retrasos, los errores, los reintentos y
+las respuestas del proveedor. Configuraría alertas ante retrasos crecientes,
+fallos frecuentes o falta de respuesta de la API. Revisaría las métricas y los
+costes para decidir cuándo ampliar la capacidad.
