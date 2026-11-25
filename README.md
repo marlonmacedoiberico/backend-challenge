@@ -124,6 +124,13 @@ El comando muestra un resumen de cobertura y genera estos archivos:
 Abre `coverage/index.html` en un navegador para consultar el informe. La
 compilación de TypeScript genera sus archivos en `dist/`.
 
+### Integración continua
+
+GitHub Actions ejecuta la compilación, las pruebas y la cobertura al subir
+cambios, abrir o actualizar una solicitud de cambios, o iniciar el workflow
+manualmente desde la pestaña **Actions**. El informe HTML y el archivo LCOV
+quedan disponibles como artefacto durante 14 días.
+
 Ejemplos del informe de cobertura:
 
 ![Resumen de cobertura](imgs/test-coverage.png)

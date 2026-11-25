@@ -1,0 +1,51 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  # "ci-" is a prefix that identifies the concurrency group.
+  # `${{ github.workflow }}` expands to the workflow name, such as "CI".
+  # `${{ github.ref }}` expands to the triggering branch or ref, such as
+  # `refs/heads/main`. Together, they identify a group for each workflow
+  # and ref. Since cancel-in-progress is true, a new run cancels an older
+  # run in the same group.
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Build, test and coverage
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build and run tests with coverage
+        run: npm run test:coverage
+
+      - name: Save coverage report
+        if: always() && hashFiles('coverage/lcov.info') != ''
+        uses: actions/upload-artifact@v6
+        with:
+          name: test-coverage
+          path: |
+            coverage/index.html
+            coverage/lcov.info
+          if-no-files-found: error
+          retention-days: 14
