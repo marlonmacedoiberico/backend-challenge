@@ -219,3 +219,25 @@ Ejemplos del informe de cobertura:
   instantes UTC.
 - El simulador del proveedor en `provider/` es fijo para la evaluación y no
   debe modificarse.
+
+## Lo que se agregó, lo que se dejó y lo que haría con más tiempo
+
+### Lo que se agregó
+
+Se incorporó un frontend de prueba en [`frontend/`](frontend/) para explorar
+los flujos de la API. Para respaldarlo, se añadieron operaciones CRUD para las
+distintas entidades del dominio.
+
+### Lo que se dejó fuera
+
+La lógica de envío se mantuvo en la aplicación, sin incorporar un motor de
+reglas de negocio como Drools para Java o GoRules Zen Engine para Node.js.
+
+### Qué haría con más tiempo
+
+Si ClinicSay aumenta el volumen de citas, procesa más recordatorios en paralelo
+o incorpora nuevos canales de comunicación, separaría el registro de citas del
+despacho de mensajes. El patrón **Transactional Outbox** permitiría guardar la
+operación de negocio y la instrucción de enviar el recordatorio dentro de la
+misma transacción. Así, el envío pendiente no dependería únicamente de la
+memoria de un proceso que podría fallar.
