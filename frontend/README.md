@@ -31,6 +31,8 @@ Open <http://127.0.0.1:5000>. The API base URL defaults to `http://localhost:300
 
 ## Walkthrough
 
+![ClinicSay test frontend](../imgs/test-frontend.png)
+
 1. Create a clinic and enter its IANA timezone, such as `Europe/Madrid`.
 2. Create a patient for that clinic. A valid E.164 phone number is needed for reminder delivery and simulated replies. **Accepts reminders** defaults to Yes.
 3. Create an appointment with a future UTC date and time. The UI submits a timezone-aware ISO 8601 timestamp ending in `Z`.

@@ -67,6 +67,14 @@ En CMD, usa:
 docker compose down
 ```
 
+## Interfaz de prueba
+
+El directorio [`frontend/`](frontend/) contiene una interfaz local para probar
+la API y el simulador del proveedor. Para instalarla y ejecutarla, sigue las
+instrucciones de su [README](frontend/README.md).
+
+![Interfaz de prueba](imgs/test-frontend.png)
+
 ## Pruebas y cobertura
 
 Se necesita Node.js 22 o posterior y npm. Instala las dependencias y ejecuta
@@ -130,6 +138,8 @@ GitHub Actions ejecuta la compilación, las pruebas y la cobertura al subir
 cambios, abrir o actualizar una solicitud de cambios, o iniciar el workflow
 manualmente desde la pestaña **Actions**. El informe HTML y el archivo LCOV
 quedan disponibles como artefacto durante 14 días.
+
+![Workflow de integración continua](imgs/github-action-1.png)
 
 Ejemplos del informe de cobertura:
 
