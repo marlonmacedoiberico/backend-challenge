@@ -9,6 +9,21 @@ El enunciado está en [`enunciado.pdf`](enunciado.pdf), y
 [`openapi.yaml`](openapi.yaml) define el contrato HTTP. Los requisitos y las
 decisiones de diseño del producto están en `.ai/steering/` y `.ai/specs/`.
 
+## Decisiones de arquitectura
+
+### Arquitectura
+
+Para el alcance actual del challenge, un backend monolítico es suficiente. Esta
+decisión mantiene sencillo el despliegue y permite concentrar el esfuerzo en
+resolver los requisitos del producto.
+
+La estructura sigue los principios de Clean Architecture para distinguir con
+claridad los casos de uso, los endpoints, los servicios y los repositorios.
+Los casos de uso coordinan el flujo de negocio; el dominio y los servicios de
+aplicación dependen de puertos, mientras PostgreSQL y el proveedor HTTP actúan
+como adaptadores. Esta separación facilita comprender cada operación, mantener
+el código y probar sus componentes de forma independiente.
+
 ## Servicios locales
 
 Se necesita Docker Desktop con Docker Compose. Para compilar e iniciar la API,
@@ -150,9 +165,6 @@ Ejemplos del informe de cobertura:
 
 ## Notas de implementación
 
-- La aplicación sigue Clean Architecture. El dominio y los servicios de
-  aplicación dependen de puertos; PostgreSQL y el proveedor HTTP son
-  adaptadores de infraestructura.
 - La planificación de recordatorios y la hora de las citas usan la zona IANA
   de la clínica cuando corresponde. La API devuelve las marcas de tiempo como
   instantes UTC.
