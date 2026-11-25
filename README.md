@@ -131,6 +131,8 @@ El comando muestra un resumen de cobertura y genera estos archivos:
 Abre `coverage/index.html` en un navegador para consultar el informe. La
 compilación de TypeScript genera sus archivos en `dist/`.
 
+Usa `npm run test:coverage:usecases` para exigir al menos 95% de cobertura de lineas, funciones, ramas y sentencias en los modulos de casos de uso.
+
 ### Integración continua
 
 GitHub Actions ejecuta la compilación, las pruebas y la cobertura al subir

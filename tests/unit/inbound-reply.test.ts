@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
-  InboundReplyUseCase,
-} from '../../src/usecases/inbound-reply-use-case.js';
+  InboundReplyUsecase,
+} from '../../src/usecases/inbound-reply-usecase.js';
 import type {
   AppointmentContext,
   InboundMessage,
@@ -50,7 +50,7 @@ function sentReminder(
 }
 
 test(
-  'InboundReplyUseCase normalizes accented SI and confirms the appointment',
+  'InboundReplyUsecase normalizes accented SI and confirms the appointment',
   async () => {
     const context = fixture();
     context.repository.reminders.set(
@@ -63,7 +63,7 @@ test(
       ),
     );
 
-    await new InboundReplyUseCase(context.repository, context.clock).process(
+    await new InboundReplyUsecase(context.repository, context.clock).process(
       inbound('msg-1', '  \u00a1S\u00ed!  '),
     );
 
@@ -75,7 +75,7 @@ test(
 );
 
 test(
-  'InboundReplyUseCase applies NO to the appointment with latest reminder',
+  'InboundReplyUsecase applies NO to the appointment with latest reminder',
   async () => {
     const context = fixture();
     addAppointment(context, 'appointment-2');
@@ -107,7 +107,7 @@ test(
       }),
     );
 
-    await new InboundReplyUseCase(context.repository, context.clock).process(
+    await new InboundReplyUsecase(context.repository, context.clock).process(
       inbound('msg-2', 'no'),
     );
 
@@ -127,7 +127,7 @@ test(
 );
 
 test(
-  'InboundReplyUseCase uses reminder creation time when sent times tie',
+  'InboundReplyUsecase uses reminder creation time when sent times tie',
   async () => {
     const context = fixture();
     addAppointment(context, 'appointment-2');
@@ -150,7 +150,7 @@ test(
       ),
     );
 
-    await new InboundReplyUseCase(context.repository, context.clock).process(
+    await new InboundReplyUsecase(context.repository, context.clock).process(
       inbound('msg-3', 'SI'),
     );
 
@@ -166,7 +166,7 @@ test(
 );
 
 test(
-  'InboundReplyUseCase uses reminder ID as final tie-break',
+  'InboundReplyUsecase uses reminder ID as final tie-break',
   async () => {
     const context = fixture();
     addAppointment(context, 'appointment-2');
@@ -181,7 +181,7 @@ test(
       sentReminder('appointment-2', 'reminder-b', sentAt, createdAt),
     );
 
-    await new InboundReplyUseCase(context.repository, context.clock).process(
+    await new InboundReplyUsecase(context.repository, context.clock).process(
       inbound('msg-4', 'SI'),
     );
 
@@ -197,7 +197,7 @@ test(
 );
 
 test(
-  'InboundReplyUseCase ignores replies when no eligible sent reminder exists',
+  'InboundReplyUsecase ignores replies when no eligible sent reminder exists',
   async (t) => {
     await t.test('appointment already started', async () => {
       const context = fixture({
@@ -212,7 +212,7 @@ test(
           '2027-02-27T08:00:00.000Z',
         ),
       );
-      await new InboundReplyUseCase(context.repository, context.clock).process(
+      await new InboundReplyUsecase(context.repository, context.clock).process(
         inbound('msg-5a', 'SI'),
       );
       assert.equal(
@@ -224,7 +224,7 @@ test(
     await t.test('appointment reminder has not been sent', async () => {
       const context = fixture();
       context.repository.reminders.set('pending', reminder());
-      await new InboundReplyUseCase(context.repository, context.clock).process(
+      await new InboundReplyUsecase(context.repository, context.clock).process(
         inbound('msg-5b', 'SI'),
       );
       assert.equal(
@@ -236,7 +236,7 @@ test(
 );
 
 test(
-  'InboundReplyUseCase ignores unknown text and processes duplicates once',
+  'InboundReplyUsecase ignores unknown text and processes duplicates once',
   async () => {
     const context = fixture();
     context.repository.reminders.set(
@@ -248,7 +248,7 @@ test(
         '2027-02-27T08:00:00.000Z',
       ),
     );
-    const useCase = new InboundReplyUseCase(
+    const useCase = new InboundReplyUsecase(
       context.repository,
       context.clock,
     );

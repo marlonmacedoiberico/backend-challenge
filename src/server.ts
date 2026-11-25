@@ -4,7 +4,7 @@ import {
   type ServerResponse,
 } from 'node:http';
 import { Pool } from 'pg';
-import { ClinicSayApplication } from './usecases/clinic-say-application.js';
+import { Usecases } from './usecases/usecases.js';
 import { DeliveryService } from './usecases/service/delivery-service.js';
 import { SchedulerService } from './usecases/service/scheduler-service.js';
 import { ApplicationError } from './domain/errors.js';
@@ -39,7 +39,7 @@ const providerBaseUrl = (process.env.PROVIDER_URL ?? 'http://localhost:4010')
   .replace(/\/$/, '');
 const delivery = new DeliveryService(repository, clock, provider);
 const scheduler = new SchedulerService(repository, clock, delivery);
-const app = new ClinicSayApplication(repository, clock, scheduler);
+const usecases = new Usecases(repository, clock, scheduler);
 
 function json(response: ServerResponse, status: number, body: unknown): void {
   response.writeHead(status, {
@@ -169,7 +169,7 @@ async function handle(
 
   if (method === 'POST' && path === '/clinics') {
     const body = objectBody(await readJson(request));
-    const clinic = await app.createClinic(
+    const clinic = await usecases.clinics.createClinic(
       requiredString(body, 'name'),
       requiredString(body, 'timezone'),
     );
@@ -181,7 +181,7 @@ async function handle(
   }
 
   if (method === 'GET' && path === '/clinics') {
-    const clinics = await app.listClinics();
+    const clinics = await usecases.clinics.listClinics();
     return json(response, 200, clinics.map(({ id, name, timezone }) => ({
       id, name, timezone,
     })));
@@ -192,7 +192,7 @@ async function handle(
     return json(response, 404, { error: 'not found' });
   }
   if (clinicId && method === 'GET') {
-    const clinic = await app.getClinic(clinicId);
+    const clinic = await usecases.clinics.getClinic(clinicId);
     return json(response, 200, {
       id: clinic.id, name: clinic.name, timezone: clinic.timezone,
     });
@@ -205,7 +205,7 @@ async function handle(
     if (body.timezone !== undefined && typeof body.timezone !== 'string') {
       throw new ApplicationError('validation', 'timezone must be a string');
     }
-    const clinic = await app.updateClinic(clinicId, {
+    const clinic = await usecases.clinics.updateClinic(clinicId, {
       ...(body.name === undefined ? {} : { name: body.name as string }),
       ...(body.timezone === undefined
         ? {} : { timezone: body.timezone as string }),
@@ -215,7 +215,7 @@ async function handle(
     });
   }
   if (clinicId && method === 'DELETE') {
-    await app.deleteClinic(clinicId);
+    await usecases.clinics.deleteClinic(clinicId);
     response.writeHead(204);
     response.end();
     return;
@@ -229,7 +229,7 @@ async function handle(
         'acceptsReminders must be a boolean',
       );
     }
-    const patient = await app.createPatient({
+    const patient = await usecases.patients.createPatient({
       clinicId: requiredUuid(body, 'clinicId'),
       name: requiredString(body, 'name'),
       phone:
@@ -249,7 +249,7 @@ async function handle(
     if (clinicFilter && !uuidPattern.test(clinicFilter)) {
       throw new ApplicationError('validation', 'clinicId must be a UUID');
     }
-    const patients = await app.listPatients(clinicFilter);
+    const patients = await usecases.patients.listPatients(clinicFilter);
     return json(response, 200, patients.map((patient) => ({
       id: patient.id,
       clinicId: patient.clinicId,
@@ -264,7 +264,7 @@ async function handle(
     return json(response, 404, { error: 'not found' });
   }
   if (patientId && method === 'GET') {
-    const patient = await app.getPatient(patientId);
+    const patient = await usecases.patients.getPatient(patientId);
     return json(response, 200, {
       id: patient.id, clinicId: patient.clinicId, name: patient.name,
       phone: patient.phone, acceptsReminders: patient.acceptsReminders,
@@ -285,7 +285,7 @@ async function handle(
         'validation', 'acceptsReminders must be a boolean',
       );
     }
-    const patient = await app.updatePatient(patientId, {
+    const patient = await usecases.patients.updatePatient(patientId, {
       ...(body.name === undefined ? {} : { name: body.name as string }),
       ...(body.phone === undefined ? {} : { phone: body.phone as string | null }),
       ...(body.acceptsReminders === undefined
@@ -297,7 +297,7 @@ async function handle(
     });
   }
   if (patientId && method === 'DELETE') {
-    await app.deletePatient(patientId);
+    await usecases.patients.deletePatient(patientId);
     response.writeHead(204);
     response.end();
     return;
@@ -305,7 +305,7 @@ async function handle(
 
   if (method === 'POST' && path === '/appointments') {
     const body = objectBody(await readJson(request));
-    const context = await app.createAppointment({
+    const context = await usecases.appointments.createAppointment({
       clinicId: requiredUuid(body, 'clinicId'),
       patientId: requiredUuid(body, 'patientId'),
       startsAt: requiredDate(body, 'startsAt'),
@@ -322,7 +322,7 @@ async function handle(
     if (patientFilter && !uuidPattern.test(patientFilter)) {
       throw new ApplicationError('validation', 'patientId must be a UUID');
     }
-    const appointments = await app.listAppointmentContexts({
+    const appointments = await usecases.appointments.listAppointmentContexts({
       clinicId: clinicFilter,
       patientId: patientFilter,
       status: url.searchParams.get('status') ?? undefined,
@@ -331,7 +331,7 @@ async function handle(
   }
 
   if (method === 'DELETE' && path === '/reminders') {
-    await app.clearReminders();
+    await usecases.reminders.clearReminders();
     response.writeHead(204);
     response.end();
     return;
@@ -346,7 +346,7 @@ async function handle(
     if (appointmentFilter && !uuidPattern.test(appointmentFilter)) {
       throw new ApplicationError('validation', 'appointmentId must be a UUID');
     }
-    const reminders = await app.listReminderContexts({
+    const reminders = await usecases.reminders.listReminderContexts({
       clinicId: clinicFilter,
       appointmentId: appointmentFilter,
       status: url.searchParams.get('status') ?? undefined,
@@ -369,19 +369,19 @@ async function handle(
     return json(response, 404, { error: 'not found' });
   }
   if (appointmentId && method === 'GET') {
-    const context = await app.getAppointment(appointmentId);
+    const context = await usecases.appointments.getAppointment(appointmentId);
     return json(response, 200, serializeAppointment(context));
   }
   if (appointmentId && method === 'PATCH') {
     const body = objectBody(await readJson(request));
-    const context = await app.reschedulerService.reschedule(
+    const context = await usecases.rescheduler.reschedule(
       appointmentId,
       requiredDate(body, 'startsAt'),
     );
     return json(response, 200, serializeAppointment(context));
   }
   if (appointmentId && method === 'DELETE') {
-    await app.deleteAppointment(appointmentId);
+    await usecases.appointments.deleteAppointment(appointmentId);
     response.writeHead(204);
     response.end();
     return;
@@ -392,12 +392,12 @@ async function handle(
     return json(response, 404, { error: 'not found' });
   }
   if (cancelId && method === 'POST') {
-    const context = await app.cancellationService.cancel(cancelId);
+    const context = await usecases.cancellation.cancel(cancelId);
     return json(response, 200, serializeAppointment(context));
   }
 
   if (method === 'POST' && path === '/jobs/reminders/run') {
-    const processed = await scheduler.runDueReminders();
+    const processed = await usecases.scheduler.runDueReminders();
     return json(response, 200, { processed });
   }
 
@@ -411,7 +411,7 @@ async function handle(
     if (typeof body.text !== 'string') {
       throw new ApplicationError('validation', 'text must be a string');
     }
-    await app.receiveInboundMessage({
+    await usecases.inboundReplies.process({
       messageId: requiredString(body, 'messageId'),
       from: senderPhone,
       text: body.text,

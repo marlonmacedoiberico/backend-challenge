@@ -34,7 +34,7 @@ function latestSentReminder(context: AppointmentContext): Reminder | null {
     .sort(compareLatestReminder)[0] ?? null;
 }
 
-export class InboundReplyUseCase {
+export class InboundReplyUsecase {
   constructor(
     private readonly repository: ClinicSayRepository,
     private readonly clock: Clock,
