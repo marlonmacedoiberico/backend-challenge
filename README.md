@@ -24,6 +24,22 @@ aplicación dependen de puertos, mientras PostgreSQL y el proveedor HTTP actúan
 como adaptadores. Esta separación facilita comprender cada operación, mantener
 el código y probar sus componentes de forma independiente.
 
+## Tratamiento de las zonas horarias
+
+La conversión entre la hora local de la clínica y un instante UTC está
+centralizada en [`src/domain/time.ts`](src/domain/time.ts). En un día normal,
+la hora local existe una sola vez y se convierte directamente al instante
+correspondiente, sin modificar sus componentes horarios.
+
+En los cambios de horario de verano (DST), una hora local puede repetirse o no
+existir:
+
+- **Atraso del reloj en otoño:** si una hora ocurre dos veces, se elige el
+  instante más temprano, correspondiente a la primera aparición de esa hora.
+- **Adelanto del reloj en primavera:** si el salto hace que una hora local no
+  exista, se avanza por la duración del salto. Por ejemplo, si el reloj pasa de
+  las 02:00 a las 03:00, las 02:30 se resuelven como las 03:30.
+
 ## Servicios locales
 
 Se necesita Docker Desktop con Docker Compose. Para compilar e iniciar la API,
