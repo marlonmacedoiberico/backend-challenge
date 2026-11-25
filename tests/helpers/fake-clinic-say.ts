@@ -14,7 +14,7 @@ import type {
   NewClinic,
   NewPatient,
   NewReminder,
-} from '../../src/application/ports.js';
+} from '../../src/usecases/ports.js';
 
 export class FakeClinicSayRepository implements ClinicSayRepository {
   readonly clinics = new Map<string, Clinic>();

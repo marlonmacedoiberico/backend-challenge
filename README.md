@@ -97,13 +97,12 @@ Las pruebas usan el ejecutor integrado `node:test` de Node.js y cubren
 `ReschedulerService`, `CancellationService` y el procesamiento de respuestas
 entrantes.
 
-Para ver los registros de depuración de zonas horarias mientras ejecutas solo
-la prueba de conversión de hora, usa CMD:
+Para ver los registros de depuración de zonas horarias en todas las pruebas unitarias, usa CMD:
 
 ```cmd
 set "DEBUG_TIME=1"
 npm run build
-node --test dist/tests/unit/time.test.js
+node --test dist/tests/unit/*.test.js
 ```
 
 Define `DEBUG_TIME` antes de iniciar Node, porque `time.ts` lee la variable

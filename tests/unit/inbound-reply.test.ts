@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   InboundReplyUseCase,
-} from '../../src/application/services/inbound-reply-use-case.js';
+} from '../../src/usecases/inbound-reply-use-case.js';
 import type {
   AppointmentContext,
   InboundMessage,

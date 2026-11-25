@@ -1,4 +1,4 @@
-import type { MessageProvider } from '../../application/ports.js';
+import type { MessageProvider } from '../../usecases/ports.js';
 import type { OutboundMessage, ProviderResult } from '../../domain/model.js';
 
 export class HttpMessageProvider implements MessageProvider {

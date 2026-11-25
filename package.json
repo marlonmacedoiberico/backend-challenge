@@ -6,8 +6,8 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "start": "node dist/src/server.js",
-    "test": "npm run build && node --test \"dist/tests/**/*.test.js\"",
-    "test:coverage": "npm run build && c8 --reporter=text --reporter=html --reporter=lcov --include=dist/src/**/*.js --exclude=dist/tests/** node --test \"dist/tests/**/*.test.js\""
+    "test": "npm run build && node --test dist/tests/unit/*.test.js",
+    "test:coverage": "npm run build && c8 --reporter=text --reporter=html --reporter=lcov --include=dist/src/**/*.js --exclude=dist/tests/** node --test dist/tests/unit/*.test.js"
   },
   "dependencies": {
     "pg": "^8.16.3"

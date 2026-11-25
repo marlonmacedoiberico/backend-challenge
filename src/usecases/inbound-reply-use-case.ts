@@ -1,9 +1,9 @@
-import type { Clock, ClinicSayRepository } from '../ports.js';
+import type { Clock, ClinicSayRepository } from './ports.js';
 import type {
   AppointmentContext,
   InboundMessage,
   Reminder,
-} from '../../domain/model.js';
+} from '../domain/model.js';
 
 function normalizeReply(text: string): 'SI' | 'NO' | null {
   const normalized = text

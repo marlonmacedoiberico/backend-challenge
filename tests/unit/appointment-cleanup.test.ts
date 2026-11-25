@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { ClinicSayApplication } from '../../src/application/clinic-say-application.js';
-import { DeliveryService } from '../../src/application/services/delivery-service.js';
-import { SchedulerService } from '../../src/application/services/scheduler-service.js';
+import { ClinicSayApplication } from '../../src/usecases/clinic-say-application.js';
+import { DeliveryService } from '../../src/usecases/service/delivery-service.js';
+import { SchedulerService } from '../../src/usecases/service/scheduler-service.js';
 import { ApplicationError } from '../../src/domain/errors.js';
 import { fixture, reminder } from '../helpers/fake-clinic-say.js';
 

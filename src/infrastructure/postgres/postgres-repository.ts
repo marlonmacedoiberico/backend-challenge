@@ -20,7 +20,7 @@ import type {
   NewPatient,
   NewReminder,
   ReminderFilters,
-} from '../../application/ports.js';
+} from '../../usecases/ports.js';
 
 type Row = QueryResultRow & Record<string, unknown>;
 

@@ -17,10 +17,10 @@ import type {
   ReminderStatus,
 } from '../domain/model.js';
 import { assertTimeZone } from '../domain/time.js';
-import { CancellationService } from './services/cancellation-service.js';
-import { InboundReplyUseCase } from './services/inbound-reply-use-case.js';
-import { ReschedulerService } from './services/rescheduler-service.js';
-import { SchedulerService } from './services/scheduler-service.js';
+import { CancellationService } from './service/cancellation-service.js';
+import { InboundReplyUseCase } from './inbound-reply-use-case.js';
+import { ReschedulerService } from './service/rescheduler-service.js';
+import { SchedulerService } from './service/scheduler-service.js';
 
 const e164 = /^\+[1-9]\d{7,14}$/;
 

@@ -4,9 +4,9 @@ import {
   type ServerResponse,
 } from 'node:http';
 import { Pool } from 'pg';
-import { ClinicSayApplication } from './application/clinic-say-application.js';
-import { DeliveryService } from './application/services/delivery-service.js';
-import { SchedulerService } from './application/services/scheduler-service.js';
+import { ClinicSayApplication } from './usecases/clinic-say-application.js';
+import { DeliveryService } from './usecases/service/delivery-service.js';
+import { SchedulerService } from './usecases/service/scheduler-service.js';
 import { ApplicationError } from './domain/errors.js';
 import type { AppointmentContext, ReminderStatus } from './domain/model.js';
 import { ControllableClock, SystemClock } from './infrastructure/clock.js';

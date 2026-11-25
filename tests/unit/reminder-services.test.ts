@@ -3,17 +3,17 @@ import test from 'node:test';
 import { ApplicationError } from '../../src/domain/errors.js';
 import {
   DeliveryService,
-} from '../../src/application/services/delivery-service.js';
+} from '../../src/usecases/service/delivery-service.js';
 import {
   SchedulerService,
-} from '../../src/application/services/scheduler-service.js';
+} from '../../src/usecases/service/scheduler-service.js';
 import {
   ReschedulerService,
-} from '../../src/application/services/rescheduler-service.js';
+} from '../../src/usecases/service/rescheduler-service.js';
 import {
   CancellationService,
-} from '../../src/application/services/cancellation-service.js';
-import type { MessageProvider } from '../../src/application/ports.js';
+} from '../../src/usecases/service/cancellation-service.js';
+import type { MessageProvider } from '../../src/usecases/ports.js';
 import type {
   OutboundMessage,
   ProviderResult,

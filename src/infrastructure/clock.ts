@@ -1,4 +1,4 @@
-import type { Clock } from '../application/ports.js';
+import type { Clock } from '../usecases/ports.js';
 
 export class SystemClock implements Clock {
   now(): Date { return new Date(); }
