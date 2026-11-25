@@ -40,6 +40,39 @@ existir:
   exista, se avanza por la duración del salto. Por ejemplo, si el reloj pasa de
   las 02:00 a las 03:00, las 02:30 se resuelven como las 03:30.
 
+## Envíos únicos
+
+Para reducir los envíos duplicados, los recordatorios salientes cuentan con
+dos protecciones complementarias:
+
+- **Reclamo atómico del recordatorio:** PostgreSQL selecciona los recordatorios
+  pendientes con `FOR UPDATE SKIP LOCKED`, evitando que dos trabajadores
+  reclamen el mismo registro a la vez. Al reclamarlos, actualiza su estado a
+  `sending` e incrementa el número de intentos. Esto ocurre en
+  [`postgres-repository.ts:85`](src/infrastructure/postgres/postgres-repository.ts:85)
+  y [`postgres-repository.ts:91`](src/infrastructure/postgres/postgres-repository.ts:91).
+- **Clave de idempotencia estable:** cada intento de envío usa el ID del
+  recordatorio como clave. Los reintentos conservan el mismo ID y el proveedor
+  recibe la clave en el encabezado `Idempotency-Key`. El ID se asigna en
+  [`delivery-service.ts:67`](src/usecases/service/delivery-service.ts:67)
+  y el encabezado se envía en
+  [`http-message-provider.ts:19`](src/infrastructure/messaging/http-message-provider.ts:19).
+
+La segunda protección depende de que el proveedor respete la clave de
+idempotencia; por sí sola, la aplicación no puede garantizar una entrega
+exactamente una vez.
+
+Los mensajes entrantes duplicados se descartan con `message_id` como clave
+primaria. Además, la base de datos impide crear más de un recordatorio para la
+misma versión de una cita:
+
+- [`postgres-repository.ts:390`](src/infrastructure/postgres/postgres-repository.ts:390)
+  ignora los mensajes entrantes cuyo `message_id` ya existe.
+- [`001_initial_schema.sql:49`](migrations/001_initial_schema.sql:49)
+  declara `message_id` como clave primaria.
+- [`001_initial_schema.sql:42`](migrations/001_initial_schema.sql:42)
+  establece la restricción única sobre `(appointment_id, appointment_version)`.
+
 ## Servicios locales
 
 Se necesita Docker Desktop con Docker Compose. Para compilar e iniciar la API,
