@@ -248,7 +248,7 @@ Empezaría con una API desplegada en la nube, PostgreSQL administrado y un
 proveedor oficial de WhatsApp. Guardaría las credenciales en un gestor de
 secretos y configuraría copias de seguridad periódicas.
 
-Adoptaría definitivamente el patrón **Transactional Outbox** mencionado antes: la operación de negocio y la instrucción de envío quedarían registradas en la misma transacción de PostgreSQL. Después, los trabajadores procesarían los recordatorios pendientes desde ese registro persistente.
+Adoptaría definitivamente el patrón **Transactional Outbox** mencionado antes: la operación de negocio y la instrucción de envío se guardarían en la misma transacción de PostgreSQL. Así, el despacho no dependería únicamente de la memoria de un proceso.
 
 Los recordatorios pendientes permanecerían registrados en PostgreSQL y varios
 trabajadores los enviarían en segundo plano. Para un volumen de 20 000
@@ -264,3 +264,15 @@ Monitorizaría el volumen pendiente, los retrasos, los errores, los reintentos y
 las respuestas del proveedor. Configuraría alertas ante retrasos crecientes,
 fallos frecuentes o falta de respuesta de la API. Revisaría las métricas y los
 costes para decidir cuándo ampliar la capacidad.
+
+## Sobre el uso de la IA
+
+Utilicé IA durante todo el ciclo de creación del software: desde la ideación del producto y la definición de requisitos (consistencia, completitud y detección de brechas), hasta el diseño, la creación de tareas de implementación y la implementación.
+
+Si las fases previas a la implementación están claras y los agentes tienen roles bien definidos —por ejemplo, arquitecto, solution designer o backend engineer con experiencia en Clean Architecture—, la implementación normalmente funciona. Después dediqué más tiempo a dar un toque más humano a los escenarios de prueba, mejorar la documentación, revisar si cada archivo estaba donde debía estar dentro de Clean Architecture y refactorizar. En el diseño también es importante que los servicios queden bien definidos.
+
+Seguí la metodología Spec-Driven Development (SDD); la metodología está descrita en `.ai/docs/`. Los documentos completados están en `.ai/`
+
+En resumen, pasé entre 7 y 9 horas especificando y planificando, unos 5 minutos implementando y entre 2 y 3 horas revisando lo generado y resolviendo o refactorizando el código.
+
+En mi experiencia anterior, la distribución era 20 % para specs, design and planning, y 80 % para coding/testing. Con IA, la proporción se invirtió.
